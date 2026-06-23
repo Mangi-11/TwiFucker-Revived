@@ -4,6 +4,8 @@ import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import mangi.twifuckerx.hook.BilingualTranslationHook
+import mangi.twifuckerx.hook.BilingualTranslationSettingsHook
 import mangi.twifuckerx.hook.GoogleAdsHook
 import mangi.twifuckerx.hook.LocalPremiumHook
 import mangi.twifuckerx.hook.PromotedTrendHook
@@ -38,5 +40,7 @@ class TwiFuckerXModule : XposedModule() {
         GoogleAdsHook.register(this, param.classLoader)
         SensitiveMediaWarningHook.register(this, param.classLoader)
         LocalPremiumHook.register(this, param.classLoader)
+        BilingualTranslationHook.register(this, param.classLoader)
+        BilingualTranslationSettingsHook.register(this, param.classLoader)
     }
 }

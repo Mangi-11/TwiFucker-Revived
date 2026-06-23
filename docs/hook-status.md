@@ -186,6 +186,47 @@
 - `Removed who-to-follow module` 已命中，推荐关注模块隐藏已验证生效。
 - 这不是广告过滤：推荐关注是正常推荐内容，不携带 promoted 元数据，按 component 标识识别。
 
+## 翻译体验
+
+### Grok 翻译双语对照
+
+相关 hook：
+
+- `BilingualTranslationHook`
+  - 入口：`com.x.urt.items.post.translate.grok.l` 的 presenter state 方法
+  - 入口：`com.x.urt.items.post.translate.grok.c` 的 presenter state 方法
+  - 行为：官方 X 已经拿到 `TranslatedPost` 后，将译文文本改成“译文 + 原文”，并保留中间空行。
+  - 命中日志：`Applied bilingual translation`
+- `BilingualTranslationHook` legacy 分支
+  - 入口：`com.twitter.tweetview.core.ui.translation.i.invoke`
+  - 入口：`com.twitter.translation.c.a`
+  - 入口：`com.twitter.translation.x.a`
+  - 入口：`com.twitter.translation.GrokTranslationStatusView.setStatus`
+  - 行为：在旧 TextView 自动翻译链路中缓存原文，再把渲染到 `grok_translation_text` 的译文替换成双语文本；顶部按钮保留官方点击行为，但将显示翻译态下的“显示原文”改成“隐藏翻译”。
+  - 命中日志：`Applied legacy bilingual translation`
+  - 命中日志：`Renamed show original action`
+- `BilingualTranslationSettingsHook`
+  - 入口：`com.twitter.translation.dialog.h.a`
+  - 入口：`com.x.groktranslate.h.a`
+  - 入口：`com.x.groktranslate.h.b`
+  - 入口：`androidx.compose.ui.platform.b.onAttachedToWindow`
+  - 行为：在官方自动翻译 bottom sheet 的 `design_bottom_sheet` 里追加 `双语对照` 开关。
+  - 命中日志：`Injected bilingual translation switch`
+  - 命中日志：`Bilingual translation enabled: true/false`
+
+当前状态：
+
+- 新 presenter state 分支注册已验证，待对应 Compose/Grok 翻译 UI 样本命中。
+- legacy 自动翻译分支已在真机验证生效：`grok_translation_text` 中已追加原推文英文内容。
+- `Applied legacy bilingual translation` 已多次命中，当前进程未见 hook 异常。
+- 自动翻译弹窗开关注入已在真机验证，布局未压住官方 `自动翻译英语` 开关。
+- 开关写入已在真机验证，关闭后新加载翻译内容放行官方默认行为；已渲染的旧内容不会立即回滚，需要重新加载或重新触发翻译。
+- 第一版不主动批量请求翻译接口，只复用官方 X 已有的手动翻译或服务端自动翻译结果。
+- 追加的原文暂不重建富文本实体，原文里的链接和 @ 提及不保证可点击；译文本身的实体列表保持原样。
+- 自动翻译底部弹窗会注入 `双语对照` 开关，默认开启；关闭后双语文本改写与“隐藏翻译”文案改写都会放行官方默认行为。
+- 开关偏好存储在 X 目标进程本地 SharedPreferences 中，只影响 TwiFuckerX 的双语对照逻辑，不影响 X 官方自动翻译开关。
+- libxposed API 102 的 `getRemotePreferences(group)` 在 hooked apps 中是只读偏好，更适合“模块自身设置页写入、目标进程读取”的跨进程配置。当前没有模块 Activity，且开关就在 X 目标进程内即时写入，因此暂用目标进程本地 SharedPreferences；后续增加模块设置页时再迁移到 `libxposed/service` + RemotePreferences。
+
 ## 当前覆盖层级
 
 ### JSON parse 层
@@ -222,6 +263,12 @@
 覆盖本地 feature switch 和 userPreferences 判断。
 
 - `LocalPremiumHook`
+
+### Presenter/UI state 层
+
+覆盖官方 X 已组装好的界面状态，不改原始模型和网络数据。
+
+- `BilingualTranslationHook`
 
 ## 后续建议
 

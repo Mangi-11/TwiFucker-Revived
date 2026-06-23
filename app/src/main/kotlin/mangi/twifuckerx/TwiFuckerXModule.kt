@@ -6,6 +6,7 @@ import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import mangi.twifuckerx.hook.PromotedTrendHook
 import mangi.twifuckerx.hook.PromotedTweetHook
+import mangi.twifuckerx.hook.SensitiveMediaWarningHook
 
 class TwiFuckerXModule : XposedModule() {
     companion object {
@@ -26,5 +27,6 @@ class TwiFuckerXModule : XposedModule() {
         log(Log.INFO, TAG, "onPackageReady: ${param.packageName}")
         PromotedTweetHook.register(this, param.classLoader)
         PromotedTrendHook.register(this, param.classLoader)
+        SensitiveMediaWarningHook.register(this, param.classLoader)
     }
 }

@@ -4,6 +4,7 @@ import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import mangi.twifuckerx.hook.PromotedTweetHook
 
 class TwiFuckerXModule : XposedModule() {
     companion object {
@@ -21,11 +22,7 @@ class TwiFuckerXModule : XposedModule() {
 
     override fun onPackageReady(param: PackageReadyParam) {
         if (param.packageName != TARGET_PACKAGE) return
-
-        log(
-            Log.INFO,
-            TAG,
-            "onPackageReady: ${param.packageName}, classloader: ${param.classLoader}",
-        )
+        log(Log.INFO, TAG, "onPackageReady: ${param.packageName}")
+        PromotedTweetHook.register(this, param.classLoader)
     }
 }

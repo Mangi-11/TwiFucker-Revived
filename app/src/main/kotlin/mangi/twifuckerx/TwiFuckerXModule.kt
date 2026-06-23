@@ -11,6 +11,7 @@ import mangi.twifuckerx.hook.PromotedTweetHook
 import mangi.twifuckerx.hook.PromotedUserHook
 import mangi.twifuckerx.hook.SensitiveMediaWarningHook
 import mangi.twifuckerx.hook.TimelinePromotionEntryHook
+import mangi.twifuckerx.hook.WhoToFollowModuleHook
 
 class TwiFuckerXModule : XposedModule() {
     companion object {
@@ -33,6 +34,7 @@ class TwiFuckerXModule : XposedModule() {
         PromotedTrendHook.register(this, param.classLoader)
         PromotedUserHook.register(this, param.classLoader)
         TimelinePromotionEntryHook.register(this, param.classLoader)
+        WhoToFollowModuleHook.register(this, param.classLoader)
         GoogleAdsHook.register(this, param.classLoader)
         SensitiveMediaWarningHook.register(this, param.classLoader)
         LocalPremiumHook.register(this, param.classLoader)

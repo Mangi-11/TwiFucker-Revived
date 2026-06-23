@@ -4,6 +4,7 @@ import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import mangi.twifuckerx.hook.LocalPremiumHook
 import mangi.twifuckerx.hook.PromotedTrendHook
 import mangi.twifuckerx.hook.PromotedTweetHook
 import mangi.twifuckerx.hook.SensitiveMediaWarningHook
@@ -28,5 +29,6 @@ class TwiFuckerXModule : XposedModule() {
         PromotedTweetHook.register(this, param.classLoader)
         PromotedTrendHook.register(this, param.classLoader)
         SensitiveMediaWarningHook.register(this, param.classLoader)
+        LocalPremiumHook.register(this, param.classLoader)
     }
 }

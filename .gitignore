@@ -1,0 +1,40 @@
+# 本机/私有配置
+local.properties
+google-services.json
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle / Kotlin 缓存与构建产物
+.gradle/
+.kotlin/
+/build/
+**/build/
+!**/src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+# Android 生成目录
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# 构建产物
+*.apk
+*.aab
+*.ap_
+*.idsig
+*.dex
+*.class
+output-metadata.json
+
+# 签名密钥 / 性能分析 / 系统文件
+*.jks
+*.keystore
+*.hprof
+*.log
+.DS_Store
+
+# 本地参考资料
+/references/

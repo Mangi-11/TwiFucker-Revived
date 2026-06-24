@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -26,7 +26,7 @@ import java.util.WeakHashMap
  * `component`）。方法按签名定位，r() 按 LoganSquare 约定名定位。
  */
 object WhoToFollowModuleHook {
-    private const val TAG = "TwiFuckerX/WhoToFollow"
+    private const val TAG = "TwiFuckerRevived/WhoToFollow"
     private const val COMPONENT_WHO_TO_FOLLOW = "suggest_who_to_follow"
 
     private const val JSON_TIMELINE_MODULE =

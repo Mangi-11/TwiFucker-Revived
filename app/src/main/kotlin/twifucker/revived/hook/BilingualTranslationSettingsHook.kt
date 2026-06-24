@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.content.Context
 import android.os.SystemClock
@@ -10,7 +10,7 @@ import java.util.Collections
 import java.util.WeakHashMap
 
 /**
- * 在 X 官方“自动翻译”Compose 弹窗里追加 TwiFuckerX 的“双语对照”开关。
+ * 在 X 官方“自动翻译”Compose 弹窗里追加 TwiFuckerRevived 的“双语对照”开关。
  *
  * 不叠加原生 View，也不自绘控件。这里复用 X 自己的 Compose preference row：
  * - 旧版路径：com.twitter.ui.components.preference.v0
@@ -19,7 +19,7 @@ import java.util.WeakHashMap
  * 这样行高、左右 padding、开关尺寸和当前 X 版本保持一致。
  */
 object BilingualTranslationSettingsHook {
-    private const val TAG = "TwiFuckerX/BilingualSettings"
+    private const val TAG = "TwiFuckerRevived/BilingualSettings"
 
     private const val LEGACY_DIALOG_COMPOSABLE = "com.twitter.translation.dialog.h"
     private const val X_LITE_DIALOG_COMPOSABLE = "com.x.groktranslate.h"
@@ -251,7 +251,7 @@ object BilingualTranslationSettingsHook {
 
                 "equals" -> proxy === args?.firstOrNull()
                 "hashCode" -> System.identityHashCode(proxy)
-                "toString" -> "TwiFuckerX.BilingualTranslationToggle"
+                "toString" -> "TwiFuckerRevived.BilingualTranslationToggle"
                 else -> null
             }
         }

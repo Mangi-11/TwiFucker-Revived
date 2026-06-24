@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -23,7 +23,7 @@ import java.util.WeakHashMap
  * 匹配规则统一，parse 与 r() 共用。
  */
 object TimelinePromotionEntryHook {
-    private const val TAG = "TwiFuckerX/TimelinePromoEntry"
+    private const val TAG = "TwiFuckerRevived/TimelinePromoEntry"
 
     private const val JSON_TIMELINE_ENTRY =
         "com.twitter.model.json.timeline.urt.JsonTimelineEntry"

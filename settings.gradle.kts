@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TwiFuckerX"
+rootProject.name = "TwiFucker-Revived"
 include(":app")

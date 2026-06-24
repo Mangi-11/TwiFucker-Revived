@@ -1,23 +1,23 @@
-package mangi.twifuckerx
+package twifucker.revived
 
 import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import mangi.twifuckerx.hook.BilingualTranslationHook
-import mangi.twifuckerx.hook.BilingualTranslationSettingsHook
-import mangi.twifuckerx.hook.GoogleAdsHook
-import mangi.twifuckerx.hook.LocalPremiumHook
-import mangi.twifuckerx.hook.PromotedTrendHook
-import mangi.twifuckerx.hook.PromotedTweetHook
-import mangi.twifuckerx.hook.PromotedUserHook
-import mangi.twifuckerx.hook.SensitiveMediaWarningHook
-import mangi.twifuckerx.hook.TimelinePromotionEntryHook
-import mangi.twifuckerx.hook.WhoToFollowModuleHook
+import twifucker.revived.hook.BilingualTranslationHook
+import twifucker.revived.hook.BilingualTranslationSettingsHook
+import twifucker.revived.hook.GoogleAdsHook
+import twifucker.revived.hook.LocalPremiumHook
+import twifucker.revived.hook.PromotedTrendHook
+import twifucker.revived.hook.PromotedTweetHook
+import twifucker.revived.hook.PromotedUserHook
+import twifucker.revived.hook.SensitiveMediaWarningHook
+import twifucker.revived.hook.TimelinePromotionEntryHook
+import twifucker.revived.hook.WhoToFollowModuleHook
 
-class TwiFuckerXModule : XposedModule() {
+class TwiFuckerRevivedModule : XposedModule() {
     companion object {
-        private const val TAG = "TwiFuckerX"
+        private const val TAG = "TwiFuckerRevived"
         private const val TARGET_PACKAGE = "com.twitter.android"
     }
 

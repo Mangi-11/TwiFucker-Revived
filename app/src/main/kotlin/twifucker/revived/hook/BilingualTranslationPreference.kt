@@ -1,9 +1,9 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.content.Context
 
 object BilingualTranslationPreference {
-    private const val PREFS_NAME = "twifuckerx_translation"
+    private const val PREFS_NAME = "twifucker_revived_translation"
     private const val KEY_BILINGUAL_TRANSLATION_ENABLED = "bilingual_translation_enabled"
 
     @Volatile

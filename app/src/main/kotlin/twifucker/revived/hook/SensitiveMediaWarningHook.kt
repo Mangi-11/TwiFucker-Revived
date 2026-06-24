@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -23,7 +23,7 @@ import java.util.WeakHashMap
  * 返回类型与参数个数定位，不硬编码 parse 方法名。
  */
 object SensitiveMediaWarningHook {
-    private const val TAG = "TwiFuckerX/SensitiveMediaWarning"
+    private const val TAG = "TwiFuckerRevived/SensitiveMediaWarning"
 
     private const val JSON_SENSITIVE_MEDIA_WARNING =
         "com.twitter.model.json.core.JsonSensitiveMediaWarning"

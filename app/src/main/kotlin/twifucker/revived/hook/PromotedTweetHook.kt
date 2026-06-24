@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -18,7 +18,7 @@ import java.util.WeakHashMap
  * 编码方法名——LoganSquare 入口在旧版 Twitter 叫 _parse，当前 12.1.1 已改名为 parse。
  */
 object PromotedTweetHook {
-    private const val TAG = "TwiFuckerX/PromotedTweet"
+    private const val TAG = "TwiFuckerRevived/PromotedTweet"
 
     private const val JSON_TIMELINE_TWEET =
         "com.twitter.model.json.timeline.urt.JsonTimelineTweet"

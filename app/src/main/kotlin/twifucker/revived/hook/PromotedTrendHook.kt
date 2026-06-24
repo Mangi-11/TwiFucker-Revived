@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -24,7 +24,7 @@ import java.util.WeakHashMap
  * 不依赖易变的名字。
  */
 object PromotedTrendHook {
-    private const val TAG = "TwiFuckerX/PromotedTrend"
+    private const val TAG = "TwiFuckerRevived/PromotedTrend"
 
     private const val JSON_TIMELINE_TREND =
         "com.twitter.model.json.timeline.urt.JsonTimelineTrend"

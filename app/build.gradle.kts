@@ -3,13 +3,13 @@ plugins {
 }
 
 android {
-    namespace = "mangi.twifuckerx"
+    namespace = "twifucker.revived"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "mangi.twifuckerx"
+        applicationId = "twifucker.revived"
         minSdk = 27
         targetSdk = 37
         versionCode = 1

@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -21,7 +21,7 @@ import java.util.WeakHashMap
  * JsonPromotedContentUrt 类型定位，解析方法按返回类型与参数个数定位，不硬编码易变名字。
  */
 object PromotedUserHook {
-    private const val TAG = "TwiFuckerX/PromotedUser"
+    private const val TAG = "TwiFuckerRevived/PromotedUser"
 
     private const val JSON_TIMELINE_USER =
         "com.twitter.model.json.timeline.urt.JsonTimelineUser"

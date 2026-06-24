@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import android.widget.TextView
@@ -25,7 +25,7 @@ import java.util.WeakHashMap
  * 不带可点击实体，避免为了显示原文去重建复杂的富文本索引。
  */
 object BilingualTranslationHook {
-    private const val TAG = "TwiFuckerX/BilingualTranslate"
+    private const val TAG = "TwiFuckerRevived/BilingualTranslate"
 
     private const val MANUAL_TRANSLATION_PRESENTER =
         "com.x.urt.items.post.translate.grok.l"

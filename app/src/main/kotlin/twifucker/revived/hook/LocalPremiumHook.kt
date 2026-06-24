@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
@@ -30,7 +30,7 @@ import java.util.WeakHashMap
  * 应停止，不硬绕。
  */
 object LocalPremiumHook {
-    private const val TAG = "TwiFuckerX/LocalPremium"
+    private const val TAG = "TwiFuckerRevived/LocalPremium"
 
     private const val CONFIG_CLASS = "com.twitter.util.config.c0"
     private const val FEATURES_CLASS = "com.twitter.subscriptions.features.api.f"

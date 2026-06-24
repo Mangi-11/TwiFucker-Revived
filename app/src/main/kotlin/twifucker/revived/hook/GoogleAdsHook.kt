@@ -1,4 +1,4 @@
-package mangi.twifuckerx.hook
+package twifucker.revived.hook
 
 import android.util.Log
 import android.view.View
@@ -17,7 +17,7 @@ import java.util.WeakHashMap
  * onVisibilityChanged 按 (View, int) -> void 签名定位，不硬编码方法名。
  */
 object GoogleAdsHook {
-    private const val TAG = "TwiFuckerX/GoogleAds"
+    private const val TAG = "TwiFuckerRevived/GoogleAds"
 
     private const val NATIVE_AD_VIEW_CLASS =
         "com.google.android.gms.ads.nativead.NativeAdView"

@@ -1,12 +1,12 @@
 # Hook 状态记录
 
-本文记录 TwiFuckerX 当前 hook 的验证状态，避免后续重复定位已经确认过的问题。
+本文记录 TwiFucker-Revived 当前 hook 的验证状态，避免后续重复定位已经确认过的问题。
 
 ## 当前环境
 
 - 目标应用：`com.twitter.android`
 - 当前适配版本：X/Twitter 12.1.1
-- 模块包名：`mangi.twifuckerx`
+- 模块包名：`twifucker.revived`
 - Xposed API：libxposed API 102
 - 日志位置：LSPosed verbose 日志，通常在 `/data/adb/lspd/log/verbose_*.log`
 
@@ -224,7 +224,7 @@
 - 第一版不主动批量请求翻译接口，只复用官方 X 已有的手动翻译或服务端自动翻译结果。
 - 追加的原文暂不重建富文本实体，原文里的链接和 @ 提及不保证可点击；译文本身的实体列表保持原样。
 - 自动翻译底部弹窗会注入 `双语对照` 开关，默认开启；关闭后双语文本改写与“隐藏翻译”文案改写都会放行官方默认行为。
-- 开关偏好存储在 X 目标进程本地 SharedPreferences 中，只影响 TwiFuckerX 的双语对照逻辑，不影响 X 官方自动翻译开关。
+- 开关偏好存储在 X 目标进程本地 SharedPreferences 中，只影响 TwiFucker-Revived 的双语对照逻辑，不影响 X 官方自动翻译开关。
 - libxposed API 102 的 `getRemotePreferences(group)` 在 hooked apps 中是只读偏好，更适合“模块自身设置页写入、目标进程读取”的跨进程配置。当前没有模块 Activity，且开关就在 X 目标进程内即时写入，因此暂用目标进程本地 SharedPreferences；后续增加模块设置页时再迁移到 `libxposed/service` + RemotePreferences。
 
 ## 当前覆盖层级

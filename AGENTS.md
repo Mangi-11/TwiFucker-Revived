@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-TwiFuckerX 是一个 Kotlin Android/Xposed 模块项目，目标是基于 `libxposed/api` 102，把旧版 TwiFucker 的思路适配到当前 Twitter/X（`com.twitter.android`）。
+TwiFucker-Revived 是一个 Kotlin Android/Xposed 模块项目，目标是基于 `libxposed/api` 102，把旧版 TwiFucker 的思路适配到当前 Twitter/X（`com.twitter.android`）。
 
 本项目要实现的是面向新版 Twitter/X 的全新 hook。旧版 TwiFucker 只作为行为和架构参考；不要直接大段复制旧项目源码。实现任何 hook 前，都必须先在当前 Twitter/X APK 的反编译结果中重新确认目标类、方法和字段仍然存在。
 
@@ -11,8 +11,8 @@ TwiFuckerX 是一个 Kotlin Android/Xposed 模块项目，目标是基于 `libxp
 ## 当前模块结构
 
 - Android 模块：`:app`
-- 包名 / namespace / applicationId：`mangi.twifuckerx`
-- Xposed 入口类：`mangi.twifuckerx.TwiFuckerXModule`
+- 包名 / namespace / applicationId：`twifucker.revived`
+- Xposed 入口类：`twifucker.revived.TwiFuckerRevivedModule`
 - Xposed 元数据：
   - `app/src/main/resources/META-INF/xposed/java_init.list`
   - `app/src/main/resources/META-INF/xposed/module.prop`

@@ -5,10 +5,12 @@
 ## 当前环境
 
 - 目标应用：`com.twitter.android`
-- 当前适配版本：X/Twitter 12.1.1
+- 当前适配版本：X/Twitter 12.5.0-release.0（312050000）
 - 模块包名：`twifucker.revived`
 - Xposed API：libxposed API 102
 - 日志位置：LSPosed verbose 日志，通常在 `/data/adb/lspd/log/verbose_*.log`
+- 更新流水线：`tools/twitter-update/pull-and-analyze.sh`
+- 最近静态契约报告：`references/decompiled/twitter/12.5.0-release.0_312050000/analysis.md`
 
 ## 已验证生效
 
@@ -54,13 +56,15 @@
 相关 hook：
 
 - `LocalPremiumHook`
-  - 入口：feature switch / userPreferences 相关本地判断。
+  - 入口：`com.twitter.util.config.a0` / `com.twitter.util.config.c0` 的 `(String, boolean) -> boolean` feature switch getter。
+  - 入口：`com.twitter.subscriptions.features.api.i` / `...api.f` 的 Companion `g(String[], prefs)` userPreferences gate。
   - 行为：本地 UI gate 认为用户具备 Premium 状态。
 
 验证结果：
 
-- 注册已验证。
-- 升级标志消失、Premium 入口显示已验证。
+- 12.5.0 静态契约已通过：`local_premium_gate=pass`。
+- 12.1.1 上升级标志消失、Premium 入口显示曾验证。
+- 12.5.0 迁移到 `a0` / `i` / `prefs.l` 后，真机命中仍需复验。
 
 边界：
 
@@ -68,6 +72,23 @@
 - 支付页和真实 Premium 权益仍由服务端控制，不能视为真实订阅解锁。
 
 ## 已注册，等待样本验证
+
+### 新版 URT 时间线过滤
+
+相关 hook：
+
+- `UrtTimelineItemFilterHook`
+  - 入口：`com.x.urt.v$a.emit(Object, Continuation)`
+  - 入口：`UrtTimelineModule.getItems()`
+  - 行为：在新版 `com.x.models.timelines.items.UrtTimelineItem` 层过滤 promoted post/user/trend、Premium upsell entry、探索页推广 entry、RTB 图片广告 entry、who-to-follow module，并递归过滤 module 内部 item。
+  - 命中日志：`Filtered new URT timeline items: removed=...`
+  - 命中日志：`Filtered new URT module items: removed=...`
+
+当前状态：
+
+- 12.5.0 静态契约已通过：`new_urt_timeline_filter=pass`。
+- 构建和 lint 已通过。
+- 真机命中仍需在新版 X 进程中复验。
 
 ### 推广趋势
 
@@ -144,7 +165,7 @@
 
 ## 已调研但暂不实现
 
-### Timeline module 过滤
+### 旧 LoganSquare Timeline module 广告过滤
 
 调研结论：
 
@@ -162,8 +183,9 @@
 
 处理决定：
 
-- 不实现 module 过滤版。
+- 不实现旧 LoganSquare module 的泛化广告过滤版。
 - 不按 displayType 或猜测 component 值过滤，避免误删普通 carousel、话题、推荐关注等正常模块。
+- 12.5.0 已在新版 `UrtTimelineItemFilterHook` 中实现 module 内部 item 递归过滤，以及 `suggest_who_to_follow` 整模块过滤；这不是旧 LoganSquare module 泛化过滤。
 - 未来如果出现广告 module，需要重新启用诊断日志，基于真实 component/displayType/entryId 样本实现过滤。
 
 ## 非广告内容模块隐藏
@@ -197,33 +219,34 @@
   - 入口：`com.x.urt.items.post.translate.grok.c` 的 presenter state 方法
   - 行为：官方 X 已经拿到 `TranslatedPost` 后，将译文文本改成“译文 + 原文”，并保留中间空行。
   - 命中日志：`Applied bilingual translation`
-- `BilingualTranslationHook` legacy 分支
-  - 入口：`com.twitter.tweetview.core.ui.translation.i.invoke`
-  - 入口：`com.twitter.translation.c.a`
-  - 入口：`com.twitter.translation.x.a`
+- `BilingualTimelineTranslationHook`
+  - 入口：`com.twitter.tweetview.core.ui.translation.i.invoke(Object)`
+  - 入口：`com.twitter.translation.d.a(f1, g, Function0)`
+  - 行为：在 12.5.0 时间线自动翻译绑定时缓存“译文 -> 原文”，并在翻译文本写入 `grok_translation_text` 前替换成双语内容。
+  - 命中日志：`Applied timeline bilingual translation`
+- `BilingualTranslationStatusHook`
   - 入口：`com.twitter.translation.GrokTranslationStatusView.setStatus`
-  - 行为：在旧 TextView 自动翻译链路中缓存原文，再把渲染到 `grok_translation_text` 的译文替换成双语文本；顶部按钮保留官方点击行为，但将显示翻译态下的“显示原文”改成“隐藏翻译”。
-  - 命中日志：`Applied legacy bilingual translation`
-  - 命中日志：`Renamed show original action`
+  - 行为：翻译文本已显示时，根据 `双语对照` 开关修正 action 文案；开启时显示 `隐藏翻译`，关闭时恢复官方 `显示原文`。
+  - 命中日志：`Updated translation action label: bilingual=true/false`
 - `BilingualTranslationSettingsHook`
-  - 入口：`com.twitter.translation.dialog.h.a`
-  - 入口：`com.x.groktranslate.h.a`
-  - 入口：`com.x.groktranslate.h.b`
-  - 入口：`androidx.compose.ui.platform.b.onAttachedToWindow`
+  - 入口：`com.twitter.translation.dialog.g.a`
+  - 入口：`com.twitter.ui.components.preference.v0.b`
+  - 入口：`com.x.ui.common.ports.preference.n1.a`
   - 行为：在官方自动翻译 bottom sheet 的 `design_bottom_sheet` 里追加 `双语对照` 开关。
-  - 命中日志：`Injected bilingual translation switch`
+  - 命中日志：`Injected twitter bilingual translation switch`
+  - 命中日志：`Injected x-lite bilingual translation switch`
   - 命中日志：`Bilingual translation enabled: true/false`
 
 当前状态：
 
-- 新 presenter state 分支注册已验证，待对应 Compose/Grok 翻译 UI 样本命中。
-- legacy 自动翻译分支已在真机验证生效：`grok_translation_text` 中已追加原推文英文内容。
-- `Applied legacy bilingual translation` 已多次命中，当前进程未见 hook 异常。
-- 自动翻译弹窗开关注入已在真机验证，布局未压住官方 `自动翻译英语` 开关。
-- 开关写入已在真机验证，关闭后新加载翻译内容放行官方默认行为；已渲染的旧内容不会立即回滚，需要重新加载或重新触发翻译。
+- 12.5.0 presenter state 分支注册已验证：`Registered on l.d`、`Registered on c.a`。
+- 12.5.0 时间线自动翻译分支覆盖当前 `tweetview` 路径：`com.twitter.tweetview.core.ui.translation.i` -> `com.twitter.translation.d`。
+- 12.5.0 翻译状态栏 action 文案覆盖当前 `GrokTranslationStatusView.setStatus`，修正自动翻译状态下 action 置空或仍显示 `显示原文` 的问题。
+- 旧 TextView/legacy 自动翻译分支已移除，不再兼容旧 Twitter/X 版本；时间线双语使用当前 12.5.0 的 `tweetview` 路径。
+- 自动翻译弹窗 marker 与 preference row 注册已验证：`Registered marker on g.a`、`Registered on v0.b`、`Registered on n1.a`。
 - 第一版不主动批量请求翻译接口，只复用官方 X 已有的手动翻译或服务端自动翻译结果。
 - 追加的原文暂不重建富文本实体，原文里的链接和 @ 提及不保证可点击；译文本身的实体列表保持原样。
-- 自动翻译底部弹窗会注入 `双语对照` 开关，默认开启；关闭后双语文本改写与“隐藏翻译”文案改写都会放行官方默认行为。
+- 自动翻译底部弹窗会注入 `双语对照` 开关，默认开启；关闭后双语文本改写会放行官方默认行为。
 - 开关偏好存储在 X 目标进程本地 SharedPreferences 中，只影响 TwiFucker-Revived 的双语对照逻辑，不影响 X 官方自动翻译开关。
 - libxposed API 102 的 `getRemotePreferences(group)` 在 hooked apps 中是只读偏好，更适合“模块自身设置页写入、目标进程读取”的跨进程配置。当前没有模块 Activity，且开关就在 X 目标进程内即时写入，因此暂用目标进程本地 SharedPreferences；后续增加模块设置页时再迁移到 `libxposed/service` + RemotePreferences。
 
@@ -252,6 +275,18 @@
 - `r()` 是 LoganSquare 模型转换约定方法。
 - 由于当前 X 的 R8/泛型/桥接处理，按返回类型签名定位不稳定，当前使用 `getMethod("r")` 定位。
 
+### Kotlin serialization URT 层
+
+覆盖 12.5.0 新版 `com.x.models.timelines.items.UrtTimelineItem` 到 timeline flow / module items 的渲染前路径。
+
+- `UrtTimelineItemFilterHook` timeline flow 分支：`com.x.urt.v$a.emit(Object, Continuation)`
+- `UrtTimelineItemFilterHook` module items 分支：`UrtTimelineModule.getItems()`
+
+说明：
+
+- 该层优先按模型接口、getter、copy 签名和 promoted metadata 定位。
+- 每次更新后先运行 `tools/twitter-update/pull-and-analyze.sh`，确认 `new_urt_timeline_filter` 契约。
+
 ### View 层
 
 覆盖第三方原生广告 view 渲染入口。
@@ -269,6 +304,8 @@
 覆盖官方 X 已组装好的界面状态，不改原始模型和网络数据。
 
 - `BilingualTranslationHook`
+- `BilingualTimelineTranslationHook`
+- `BilingualTranslationStatusHook`
 
 ## 后续建议
 

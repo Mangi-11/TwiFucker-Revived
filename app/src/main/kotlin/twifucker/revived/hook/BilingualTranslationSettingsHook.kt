@@ -13,7 +13,7 @@ import java.util.WeakHashMap
  * 在 X 官方“自动翻译”Compose 弹窗里追加 TwiFuckerRevived 的“双语对照”开关。
  *
  * 不叠加原生 View，也不自绘控件。这里复用 X 自己的 Compose preference row：
- * - 旧版路径：com.twitter.ui.components.preference.v0
+ * - Twitter 路径：com.twitter.ui.components.preference.v0
  * - X-lite 路径：com.x.ui.common.ports.preference.n1
  *
  * 这样行高、左右 padding、开关尺寸和当前 X 版本保持一致。
@@ -21,9 +21,8 @@ import java.util.WeakHashMap
 object BilingualTranslationSettingsHook {
     private const val TAG = "TwiFuckerRevived/BilingualSettings"
 
-    private const val LEGACY_DIALOG_COMPOSABLE = "com.twitter.translation.dialog.h"
-    private const val X_LITE_DIALOG_COMPOSABLE = "com.x.groktranslate.h"
-    private const val LEGACY_PREFERENCE_ROW = "com.twitter.ui.components.preference.v0"
+    private const val TWITTER_DIALOG_COMPOSABLE = "com.twitter.translation.dialog.g"
+    private const val TWITTER_PREFERENCE_ROW = "com.twitter.ui.components.preference.v0"
     private const val X_LITE_PREFERENCE_ROW = "com.x.ui.common.ports.preference.n1"
 
     private const val BILINGUAL_TITLE = "双语对照"
@@ -38,19 +37,14 @@ object BilingualTranslationSettingsHook {
 
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
         try {
-            installDialogMarkerHook(xposed, classLoader, LEGACY_DIALOG_COMPOSABLE)
+            installDialogMarkerHook(xposed, classLoader)
         } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "legacy dialog marker hook failed: ${t.javaClass.name}: ${t.message}", t)
+            xposed.log(Log.ERROR, TAG, "dialog marker hook failed: ${t.javaClass.name}: ${t.message}", t)
         }
         try {
-            installDialogMarkerHook(xposed, classLoader, X_LITE_DIALOG_COMPOSABLE)
+            installTwitterPreferenceRowHook(xposed, classLoader)
         } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "x-lite dialog marker hook failed: ${t.javaClass.name}: ${t.message}", t)
-        }
-        try {
-            installLegacyPreferenceRowHook(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "legacy preference row hook failed: ${t.javaClass.name}: ${t.message}", t)
+            xposed.log(Log.ERROR, TAG, "twitter preference row hook failed: ${t.javaClass.name}: ${t.message}", t)
         }
         try {
             installXLitePreferenceRowHook(xposed, classLoader)
@@ -62,13 +56,12 @@ object BilingualTranslationSettingsHook {
     private fun installDialogMarkerHook(
         xposed: XposedInterface,
         classLoader: ClassLoader,
-        dialogClassName: String,
     ) {
-        val dialogClass = classLoader.loadClass(dialogClassName)
+        val dialogClass = classLoader.loadClass(TWITTER_DIALOG_COMPOSABLE)
         val methods = dialogClass.declaredMethods.filter { method ->
-            isAutoTranslationDialogComposable(dialogClassName, method)
+            isAutoTranslationDialogComposable(method)
         }
-        if (methods.isEmpty()) throw NoSuchMethodException("auto translation composable on $dialogClassName")
+        if (methods.isEmpty()) throw NoSuchMethodException("auto translation composable on $TWITTER_DIALOG_COMPOSABLE")
 
         for (method in methods) {
             if (!registeredMethods.add(method)) {
@@ -83,9 +76,8 @@ object BilingualTranslationSettingsHook {
         }
     }
 
-    private fun installLegacyPreferenceRowHook(xposed: XposedInterface, classLoader: ClassLoader) {
-        val preferenceClass = classLoader.loadClass(LEGACY_PREFERENCE_ROW)
-        val function1Class = classLoader.loadClass("kotlin.jvm.functions.Function1")
+    private fun installTwitterPreferenceRowHook(xposed: XposedInterface, classLoader: ClassLoader) {
+        val preferenceClass = classLoader.loadClass(TWITTER_PREFERENCE_ROW)
         val composerClass = classLoader.loadClass("androidx.compose.runtime.Composer")
 
         val composableRow = preferenceClass.declaredMethods.first { method ->
@@ -105,9 +97,9 @@ object BilingualTranslationSettingsHook {
                 val modifier = chain.getArg(1)
                 val composer = chain.getArg(6)
                 try {
-                    injectLegacyPreferenceRow(xposed, classLoader, composableRow, modifier, composer)
+                    injectTwitterPreferenceRow(xposed, classLoader, composableRow, modifier, composer)
                 } catch (t: Throwable) {
-                    xposed.log(Log.ERROR, TAG, "inject legacy row failed: ${t.javaClass.name}: ${t.message}", t)
+                    xposed.log(Log.ERROR, TAG, "inject twitter row failed: ${t.javaClass.name}: ${t.message}", t)
                 }
             }
             result
@@ -134,7 +126,8 @@ object BilingualTranslationSettingsHook {
         xposed.hook(rowMethod).intercept { chain ->
             val result = chain.proceed()
             val title = chain.getArg(0) as? String
-            if (shouldInjectPreferenceRow() && title != BILINGUAL_TITLE) {
+            val context = currentApplication(classLoader)
+            if (shouldInjectPreferenceRow(title, context) && title != BILINGUAL_TITLE) {
                 val composer = chain.getArg(13)
                 try {
                     injectXLitePreferenceRow(xposed, classLoader, rowMethod, composer)
@@ -148,7 +141,7 @@ object BilingualTranslationSettingsHook {
         xposed.log(Log.INFO, TAG, "Registered on ${preferenceClass.simpleName}.${rowMethod.name}")
     }
 
-    private fun injectLegacyPreferenceRow(
+    private fun injectTwitterPreferenceRow(
         xposed: XposedInterface,
         classLoader: ClassLoader,
         rowMethod: Method,
@@ -170,7 +163,7 @@ object BilingualTranslationSettingsHook {
                 390,
                 8,
             )
-            xposed.log(Log.INFO, TAG, "Injected legacy bilingual translation switch")
+            xposed.log(Log.INFO, TAG, "Injected twitter bilingual translation switch")
         }
     }
 
@@ -264,9 +257,7 @@ object BilingualTranslationSettingsHook {
         return try {
             val remembered = composerClass.getMethod("R").invoke(composer)
             if (isComposeEmptySentinel(remembered)) {
-                val state = classLoader.loadClass("androidx.compose.runtime.q5")
-                    .getMethod("f", Object::class.java)
-                    .invoke(null, initialValue)
+                val state = createMutableState(classLoader, initialValue)
                 composerClass.getMethod("K", Object::class.java).invoke(composer, state)
                 state
             } else {
@@ -280,6 +271,12 @@ object BilingualTranslationSettingsHook {
     private fun isComposeEmptySentinel(value: Any?): Boolean =
         value != null && value.toString() == "Empty"
 
+    private fun createMutableState(classLoader: ClassLoader, initialValue: Boolean): Any {
+        return classLoader.loadClass(COMPOSE_MUTABLE_STATE_FACTORY)
+            .getMethod("f", Object::class.java)
+            .invoke(null, initialValue) as Any
+    }
+
     private fun switchStateValue(state: Any?): Boolean? =
         (state?.javaClass?.methods?.firstOrNull { it.name == "getValue" && it.parameterCount == 0 }
             ?.invoke(state) as? Boolean)
@@ -290,8 +287,9 @@ object BilingualTranslationSettingsHook {
             ?.invoke(state, value)
     }
 
-    private fun shouldInjectPreferenceRow(): Boolean =
-        injectingRow.get() != true && isRecentAutoTranslationDialog()
+    private fun shouldInjectPreferenceRow(title: String? = null, context: Context? = null): Boolean =
+        injectingRow.get() != true &&
+            (isRecentAutoTranslationDialog() || isAutoTranslationPreferenceTitle(title, context))
 
     private fun runInjecting(block: () -> Unit) {
         injectingRow.set(true)
@@ -308,17 +306,63 @@ object BilingualTranslationSettingsHook {
             .invoke(null) as? Context
     }.getOrNull()
 
-    private fun isAutoTranslationDialogComposable(dialogClassName: String, method: Method): Boolean {
-        if (dialogClassName == LEGACY_DIALOG_COMPOSABLE) {
-            return method.name == "a" &&
-                method.parameterCount == 6 &&
-                method.parameterTypes.firstOrNull()?.name == "com.twitter.translation.dialog.AutoTranslationHelpDialogFragmentArgs"
-        }
-
-        return (method.name == "a" || method.name == "b") &&
-            method.parameterTypes.firstOrNull()?.name == "com.x.groktranslate.i"
+    private fun isAutoTranslationDialogComposable(method: Method): Boolean {
+        return method.name == "a" &&
+            method.parameterCount == 6 &&
+            method.parameterTypes.firstOrNull()?.name == "com.twitter.translation.dialog.AutoTranslationHelpDialogFragmentArgs"
     }
 
     private fun isRecentAutoTranslationDialog(): Boolean =
         SystemClock.uptimeMillis() - lastAutoTranslationDialogRenderAt < 5_000L
+
+    private fun isAutoTranslationPreferenceTitle(title: String?, context: Context?): Boolean {
+        if (title.isNullOrBlank()) return false
+        if (matchesAutoTranslationKeywords(title)) return true
+
+        val appContext = context?.applicationContext ?: return false
+        val resources = appContext.resources
+        val packageName = appContext.packageName
+        return AUTO_TRANSLATION_TITLE_RESOURCES.any { resourceName ->
+            val resourceId = resources.getIdentifier(resourceName, "string", packageName)
+            if (resourceId == 0) return@any false
+            runCatching {
+                matchesFormattedResource(title, appContext.getString(resourceId, ""))
+            }.getOrDefault(false)
+        }
+    }
+
+    private fun matchesFormattedResource(title: String, template: String): Boolean {
+        val normalizedTitle = title.normalizeForMatch()
+        val normalizedTemplate = template.normalizeForMatch()
+        if (normalizedTemplate.isBlank()) return false
+        val staticParts = normalizedTemplate
+            .split("%s", "%1\$s", "%2\$s")
+            .map { it.normalizeForMatch() }
+            .filter { it.isNotBlank() }
+        return staticParts.isNotEmpty() && staticParts.all { normalizedTitle.contains(it) }
+    }
+
+    private fun matchesAutoTranslationKeywords(title: String): Boolean {
+        val normalizedTitle = title.normalizeForMatch()
+        return AUTO_TRANSLATION_TITLE_KEYWORDS.any { normalizedTitle.contains(it) }
+    }
+
+    private fun String.normalizeForMatch(): String =
+        lowercase().replace("\\s+".toRegex(), " ").trim()
+
+    private val AUTO_TRANSLATION_TITLE_RESOURCES = arrayOf(
+        "auto_translation_toggle_label",
+        "x_lite_auto_translation_toggle_label",
+    )
+
+    private val AUTO_TRANSLATION_TITLE_KEYWORDS = arrayOf(
+        "自动翻译",
+        "自動翻譯",
+        "auto translate",
+        "auto-translate",
+        "automatically translate",
+        "automatic translation",
+    )
+
+    private const val COMPOSE_MUTABLE_STATE_FACTORY = "androidx.compose.runtime.o5"
 }

@@ -2,7 +2,6 @@ package twifucker.revived.hook
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -11,6 +10,9 @@ import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logE
+import twifucker.revived.core.logI
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -79,7 +81,7 @@ object BilingualTranslationStatusHook : TargetHook {
         getTranslationActionMethod.isAccessible = true
 
         if (!registeredMethods.add(setStatusMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${statusViewClass.simpleName}.${setStatusMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${statusViewClass.simpleName}.${setStatusMethod.name}, skip")
             return
         }
 
@@ -98,7 +100,7 @@ object BilingualTranslationStatusHook : TargetHook {
             result
         }
 
-        xposed.log(Log.INFO, TAG, "Registered on ${statusViewClass.simpleName}.${setStatusMethod.name}")
+        xposed.logI(TAG, "Registered on ${statusViewClass.simpleName}.${setStatusMethod.name}")
     }
 
     private fun installPreferenceListener(xposed: XposedInterface) {
@@ -112,7 +114,7 @@ object BilingualTranslationStatusHook : TargetHook {
         }
         if (shouldRegister) {
             BilingualTranslationPreference.addListener(preferenceListener)
-            xposed.log(Log.INFO, TAG, "Registered bilingual preference listener")
+            xposed.logI(TAG, "Registered bilingual preference listener")
         }
     }
 
@@ -186,18 +188,16 @@ object BilingualTranslationStatusHook : TargetHook {
             if (failedCount > 0) {
                 val failure = firstFailure
                 if (failure != null) {
-                    xposed?.log(
-                        Log.ERROR,
+                    xposed?.logE(
                         TAG,
                         "refresh active status labels failed: count=$failedCount, first=${failure.javaClass.name}: ${failure.message}",
                         failure,
                     )
                 } else {
-                    xposed?.log(Log.ERROR, TAG, "refresh active status labels failed: count=$failedCount")
+                    xposed?.logE(TAG, "refresh active status labels failed: count=$failedCount")
                 }
             }
-            xposed?.log(
-                Log.DEBUG,
+            xposed?.logD(
                 TAG,
                 "Refreshed active status labels: count=$refreshedCount, skipped=$skippedCount, bilingual=$enabled",
             )
@@ -261,7 +261,7 @@ object BilingualTranslationStatusHook : TargetHook {
             }
         }
         if (shouldLog) {
-            xposed.log(Log.DEBUG, TAG, "Updated translation action label: bilingual=$bilingualEnabled")
+            xposed.logD(TAG, "Updated translation action label: bilingual=$bilingualEnabled")
         }
     }
 

@@ -1,11 +1,11 @@
 package twifucker.revived
 
-import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import twifucker.revived.core.HookInstaller
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logI
 import twifucker.revived.hook.BilingualTimelineTranslationHook
 import twifucker.revived.hook.BilingualTranslationHook
 import twifucker.revived.hook.BilingualTranslationSettingsHook
@@ -31,8 +31,7 @@ class TwiFuckerRevivedModule : XposedModule() {
     }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        log(
-            Log.INFO,
+        logI(
             TAG,
             "onModuleLoaded: ${param.processName}, framework: $frameworkName($frameworkVersionCode), API $apiVersion",
         )
@@ -40,7 +39,7 @@ class TwiFuckerRevivedModule : XposedModule() {
 
     override fun onPackageReady(param: PackageReadyParam) {
         if (param.packageName != TARGET_PACKAGE) return
-        log(Log.INFO, TAG, "onPackageReady: ${param.packageName}")
+        logI(TAG, "onPackageReady: ${param.packageName}")
         HookInstaller.installAll(this, param.classLoader, TARGET_HOOKS)
     }
 }

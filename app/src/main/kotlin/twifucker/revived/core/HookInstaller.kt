@@ -1,6 +1,5 @@
 package twifucker.revived.core
 
-import android.util.Log
 import io.github.libxposed.api.XposedInterface
 
 object HookInstaller {
@@ -32,8 +31,7 @@ object HookInstaller {
 
     private fun logResult(xposed: XposedInterface, result: HookInstallResult) {
         if (result.isComplete) {
-            xposed.log(
-                Log.INFO,
+            xposed.logI(
                 TAG,
                 "Installed ${result.hookName}: ${result.installedHooks}/${result.expectedHooks}",
             )
@@ -42,8 +40,7 @@ object HookInstaller {
 
         val firstFailure = result.failures.firstOrNull()
         if (firstFailure == null) {
-            xposed.log(
-                Log.ERROR,
+            xposed.logE(
                 TAG,
                 "Install ${result.hookName} incomplete: ${result.installedHooks}/${result.expectedHooks}",
             )
@@ -51,15 +48,13 @@ object HookInstaller {
         }
 
         if (firstFailure.throwable != null) {
-            xposed.log(
-                Log.ERROR,
+            xposed.logE(
                 TAG,
                 "Install ${result.hookName} incomplete: ${result.installedHooks}/${result.expectedHooks}, ${firstFailure.stage}: ${firstFailure.message}",
                 firstFailure.throwable,
             )
         } else {
-            xposed.log(
-                Log.ERROR,
+            xposed.logE(
                 TAG,
                 "Install ${result.hookName} incomplete: ${result.installedHooks}/${result.expectedHooks}",
             )
@@ -67,9 +62,9 @@ object HookInstaller {
         for (failure in result.failures.drop(1)) {
             val throwable = failure.throwable
             if (throwable != null) {
-                xposed.log(Log.ERROR, TAG, "${result.hookName}/${failure.stage}: ${failure.message}", throwable)
+                xposed.logE(TAG, "${result.hookName}/${failure.stage}: ${failure.message}", throwable)
             } else {
-                xposed.log(Log.ERROR, TAG, "${result.hookName}/${failure.stage}: ${failure.message}")
+                xposed.logE(TAG, "${result.hookName}/${failure.stage}: ${failure.message}")
             }
         }
     }
@@ -78,7 +73,11 @@ object HookInstaller {
         val installed = results.sumOf { it.installedHooks }
         val expected = results.sumOf { it.expectedHooks }
         val failed = results.count { !it.isComplete }
-        val level = if (failed == 0) Log.INFO else Log.WARN
-        xposed.log(level, TAG, "Hook install summary: installed=$installed/$expected, incomplete=$failed")
+        val message = "Hook install summary: installed=$installed/$expected, incomplete=$failed"
+        if (failed == 0) {
+            xposed.logI(TAG, message)
+        } else {
+            xposed.logW(TAG, message)
+        }
     }
 }

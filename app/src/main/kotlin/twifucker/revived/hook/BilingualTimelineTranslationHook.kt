@@ -2,7 +2,6 @@ package twifucker.revived.hook
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
@@ -11,6 +10,9 @@ import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.HookLocator
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logE
+import twifucker.revived.core.logI
 import twifucker.revived.hook.translation.ActiveTimelineTranslations
 import twifucker.revived.hook.translation.BilingualTextFormatter
 import twifucker.revived.hook.translation.TimelineTranslationCache
@@ -114,7 +116,7 @@ object BilingualTimelineTranslationHook : TargetHook {
         }
 
         if (!registeredMethods.add(invokeMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered mapping on ${binderClass.simpleName}.${invokeMethod.name}, skip")
+            xposed.logI(TAG, "Already registered mapping on ${binderClass.simpleName}.${invokeMethod.name}, skip")
             return
         }
 
@@ -123,7 +125,7 @@ object BilingualTimelineTranslationHook : TargetHook {
             chain.proceed()
         }
 
-        xposed.log(Log.INFO, TAG, "Registered mapping on ${binderClass.simpleName}.${invokeMethod.name}")
+        xposed.logI(TAG, "Registered mapping on ${binderClass.simpleName}.${invokeMethod.name}")
     }
 
     private fun installRenderHook(
@@ -140,7 +142,7 @@ object BilingualTimelineTranslationHook : TargetHook {
         }
 
         if (!registeredMethods.add(renderMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered render on ${delegateClass.simpleName}.${renderMethod.name}, skip")
+            xposed.logI(TAG, "Already registered render on ${delegateClass.simpleName}.${renderMethod.name}, skip")
             return
         }
 
@@ -172,11 +174,11 @@ object BilingualTimelineTranslationHook : TargetHook {
             val args = chain.getArgs().toTypedArray()
             args[0] = newContent
 
-            xposed.log(Log.DEBUG, TAG, "Applied timeline bilingual translation")
+            xposed.logD(TAG, "Applied timeline bilingual translation")
             chain.proceed(args)
         }
 
-        xposed.log(Log.INFO, TAG, "Registered render on ${delegateClass.simpleName}.${renderMethod.name}")
+        xposed.logI(TAG, "Registered render on ${delegateClass.simpleName}.${renderMethod.name}")
     }
 
     private fun installPreferenceListener(xposed: XposedInterface) {
@@ -190,7 +192,7 @@ object BilingualTimelineTranslationHook : TargetHook {
         }
         if (shouldRegister) {
             BilingualTranslationPreference.addListener(preferenceListener)
-            xposed.log(Log.INFO, TAG, "Registered bilingual preference listener")
+            xposed.logI(TAG, "Registered bilingual preference listener")
         }
     }
 
@@ -267,18 +269,16 @@ object BilingualTimelineTranslationHook : TargetHook {
             if (failedCount > 0) {
                 val failure = firstFailure
                 if (failure != null) {
-                    xposed?.log(
-                        Log.ERROR,
+                    xposed?.logE(
                         TAG,
                         "refresh active timeline translations failed: count=$failedCount, first=${failure.javaClass.name}: ${failure.message}",
                         failure,
                     )
                 } else {
-                    xposed?.log(Log.ERROR, TAG, "refresh active timeline translations failed: count=$failedCount")
+                    xposed?.logE(TAG, "refresh active timeline translations failed: count=$failedCount")
                 }
             }
-            xposed?.log(
-                Log.DEBUG,
+            xposed?.logD(
                 TAG,
                 "Refreshed active timeline translations: count=$refreshedCount, skipped=$skippedCount, bilingual=$enabled",
             )

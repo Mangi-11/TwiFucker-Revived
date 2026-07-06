@@ -1,11 +1,12 @@
 package twifucker.revived.hook
 
-import android.util.Log
 import io.github.libxposed.api.XposedInterface
 import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logI
 import twifucker.revived.hook.translation.BilingualTextFormatter
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -91,7 +92,7 @@ object BilingualTranslationHook : TargetHook {
             ?: throw NoSuchMethodException("presenter state method on $presenterName")
 
         if (!registeredMethods.add(presenterMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${presenterClass.simpleName}.${presenterMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${presenterClass.simpleName}.${presenterMethod.name}, skip")
             return
         }
 
@@ -113,11 +114,11 @@ object BilingualTranslationHook : TargetHook {
                 translatedPostClass = translatedPostClass,
             ) ?: return@intercept state
 
-            xposed.log(Log.DEBUG, TAG, "Applied bilingual translation")
+            xposed.logD(TAG, "Applied bilingual translation")
             newState
         }
 
-        xposed.log(Log.INFO, TAG, "Registered on ${presenterClass.simpleName}.${presenterMethod.name}")
+        xposed.logI(TAG, "Registered on ${presenterClass.simpleName}.${presenterMethod.name}")
     }
 
     private fun readOriginalText(

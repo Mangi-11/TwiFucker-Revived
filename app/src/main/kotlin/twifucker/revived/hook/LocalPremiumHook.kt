@@ -1,11 +1,12 @@
 package twifucker.revived.hook
 
-import android.util.Log
 import io.github.libxposed.api.XposedInterface
 import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logI
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -110,19 +111,19 @@ object LocalPremiumHook : TargetHook {
 
         for ((configClass, getter) in getters) {
             if (!registeredMethods.add(getter)) {
-                xposed.log(Log.INFO, TAG, "Already registered on ${configClass.simpleName}.${getter.name}, skip")
+                xposed.logI(TAG, "Already registered on ${configClass.simpleName}.${getter.name}, skip")
                 continue
             }
             xposed.hook(getter).intercept { chain ->
                 val result = chain.proceed()
                 val key = chain.getArg(0) as? String
                 if (key != null && key in forcedKeys) {
-                    xposed.log(Log.DEBUG, TAG, "Forced premium gate: $key = true")
+                    xposed.logD(TAG, "Forced premium gate: $key = true")
                     return@intercept true
                 }
                 result
             }
-            xposed.log(Log.INFO, TAG, "Registered on ${configClass.simpleName}.${getter.name}")
+            xposed.logI(TAG, "Registered on ${configClass.simpleName}.${getter.name}")
         }
     }
 
@@ -158,7 +159,7 @@ object LocalPremiumHook : TargetHook {
             ?: throw NoSuchMethodException("premium userPreferences gate")
 
         if (!registeredMethods.add(gMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${companionClass.simpleName}.${gMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${companionClass.simpleName}.${gMethod.name}, skip")
             return
         }
 
@@ -166,11 +167,11 @@ object LocalPremiumHook : TargetHook {
             val result = chain.proceed()
             val strArr = chain.getArg(0) as? Array<*>
             if (strArr != null && strArr.any { (it as? String) in premiumFeatures }) {
-                xposed.log(Log.DEBUG, TAG, "Forced premium feature gate (userPreferences)")
+                xposed.logD(TAG, "Forced premium feature gate (userPreferences)")
                 return@intercept true
             }
             result
         }
-        xposed.log(Log.INFO, TAG, "Registered on ${companionClass.simpleName}.${gMethod.name}")
+        xposed.logI(TAG, "Registered on ${companionClass.simpleName}.${gMethod.name}")
     }
 }

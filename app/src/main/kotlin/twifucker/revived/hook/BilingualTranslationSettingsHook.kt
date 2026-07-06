@@ -2,12 +2,13 @@ package twifucker.revived.hook
 
 import android.content.Context
 import android.os.SystemClock
-import android.util.Log
 import io.github.libxposed.api.XposedInterface
 import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logE
+import twifucker.revived.core.logI
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.Collections
@@ -72,14 +73,14 @@ object BilingualTranslationSettingsHook : TargetHook {
 
         for (method in methods) {
             if (!registeredMethods.add(method)) {
-                xposed.log(Log.INFO, TAG, "Already registered marker on ${dialogClass.simpleName}.${method.name}, skip")
+                xposed.logI(TAG, "Already registered marker on ${dialogClass.simpleName}.${method.name}, skip")
                 continue
             }
             xposed.hook(method).intercept { chain ->
                 lastAutoTranslationDialogRenderAt = SystemClock.uptimeMillis()
                 chain.proceed()
             }
-            xposed.log(Log.INFO, TAG, "Registered marker on ${dialogClass.simpleName}.${method.name}")
+            xposed.logI(TAG, "Registered marker on ${dialogClass.simpleName}.${method.name}")
         }
     }
 
@@ -94,7 +95,7 @@ object BilingualTranslationSettingsHook : TargetHook {
         }
 
         if (!registeredMethods.add(composableRow)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${preferenceClass.simpleName}.${composableRow.name}, skip")
+            xposed.logI(TAG, "Already registered on ${preferenceClass.simpleName}.${composableRow.name}, skip")
             return
         }
 
@@ -106,13 +107,13 @@ object BilingualTranslationSettingsHook : TargetHook {
                 try {
                     injectTwitterPreferenceRow(xposed, classLoader, composableRow, modifier, composer)
                 } catch (t: Throwable) {
-                    xposed.log(Log.ERROR, TAG, "inject twitter row failed: ${t.javaClass.name}: ${t.message}", t)
+                    xposed.logE(TAG, "inject twitter row failed: ${t.javaClass.name}: ${t.message}", t)
                 }
             }
             result
         }
 
-        xposed.log(Log.INFO, TAG, "Registered on ${preferenceClass.simpleName}.${composableRow.name}")
+        xposed.logI(TAG, "Registered on ${preferenceClass.simpleName}.${composableRow.name}")
     }
 
     private fun installXLitePreferenceRowHook(xposed: XposedInterface, classLoader: ClassLoader) {
@@ -126,7 +127,7 @@ object BilingualTranslationSettingsHook : TargetHook {
         }
 
         if (!registeredMethods.add(rowMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${preferenceClass.simpleName}.${rowMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${preferenceClass.simpleName}.${rowMethod.name}, skip")
             return
         }
 
@@ -139,13 +140,13 @@ object BilingualTranslationSettingsHook : TargetHook {
                 try {
                     injectXLitePreferenceRow(xposed, classLoader, rowMethod, composer)
                 } catch (t: Throwable) {
-                    xposed.log(Log.ERROR, TAG, "inject x-lite row failed: ${t.javaClass.name}: ${t.message}", t)
+                    xposed.logE(TAG, "inject x-lite row failed: ${t.javaClass.name}: ${t.message}", t)
                 }
             }
             result
         }
 
-        xposed.log(Log.INFO, TAG, "Registered on ${preferenceClass.simpleName}.${rowMethod.name}")
+        xposed.logI(TAG, "Registered on ${preferenceClass.simpleName}.${rowMethod.name}")
     }
 
     private fun injectTwitterPreferenceRow(
@@ -170,7 +171,7 @@ object BilingualTranslationSettingsHook : TargetHook {
                 390,
                 8,
             )
-            xposed.log(Log.INFO, TAG, "Injected twitter bilingual translation switch")
+            xposed.logI(TAG, "Injected twitter bilingual translation switch")
         }
     }
 
@@ -213,7 +214,7 @@ object BilingualTranslationSettingsHook : TargetHook {
                 0,
                 6582,
             )
-            xposed.log(Log.INFO, TAG, "Injected x-lite bilingual translation switch")
+            xposed.logI(TAG, "Injected x-lite bilingual translation switch")
         }
     }
 
@@ -244,7 +245,7 @@ object BilingualTranslationSettingsHook : TargetHook {
                     if (context != null) {
                         BilingualTranslationPreference.setEnabled(context, enabled)
                         setSwitchStateValue(state, enabled)
-                        xposed.log(Log.INFO, TAG, "Bilingual translation enabled: $enabled")
+                        xposed.logI(TAG, "Bilingual translation enabled: $enabled")
                     }
                     null
                 }

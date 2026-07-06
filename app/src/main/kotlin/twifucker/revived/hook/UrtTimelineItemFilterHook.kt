@@ -1,12 +1,13 @@
 package twifucker.revived.hook
 
-import android.util.Log
 import io.github.libxposed.api.XposedInterface
 import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.HookLocator
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logI
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -87,7 +88,7 @@ object UrtTimelineItemFilterHook : TargetHook {
         }
 
         if (!registeredMethods.add(emitMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${flowFilterClass.simpleName}.${emitMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${flowFilterClass.simpleName}.${emitMethod.name}, skip")
             return
         }
 
@@ -96,21 +97,20 @@ object UrtTimelineItemFilterHook : TargetHook {
             val filtered = filterTimelineItems(items, shape)
             if (!filtered.changed) return@intercept chain.proceed()
 
-            xposed.log(
-                Log.DEBUG,
+            xposed.logD(
                 TAG,
                 "Filtered new URT timeline items: removed=${filtered.removed}, kept=${filtered.items.size}",
             )
             chain.proceed(arrayOf(filtered.items, chain.getArg(1)))
         }
-        xposed.log(Log.INFO, TAG, "Registered timeline flow on ${flowFilterClass.simpleName}.${emitMethod.name}")
+        xposed.logI(TAG, "Registered timeline flow on ${flowFilterClass.simpleName}.${emitMethod.name}")
     }
 
     private fun installModuleItemsHook(xposed: XposedInterface, shape: ModelShape) {
         val getItemsMethod = shape.moduleClass.getMethod("getItems")
 
         if (!registeredMethods.add(getItemsMethod)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${shape.moduleClass.simpleName}.${getItemsMethod.name}, skip")
+            xposed.logI(TAG, "Already registered on ${shape.moduleClass.simpleName}.${getItemsMethod.name}, skip")
             return
         }
 
@@ -120,14 +120,13 @@ object UrtTimelineItemFilterHook : TargetHook {
             val filtered = filterModuleItems(items, shape)
             if (!filtered.changed) return@intercept items
 
-            xposed.log(
-                Log.DEBUG,
+            xposed.logD(
                 TAG,
                 "Filtered new URT module items: removed=${filtered.removed}, kept=${filtered.items.size}",
             )
             filtered.items
         }
-        xposed.log(Log.INFO, TAG, "Registered module items on ${shape.moduleClass.simpleName}.${getItemsMethod.name}")
+        xposed.logI(TAG, "Registered module items on ${shape.moduleClass.simpleName}.${getItemsMethod.name}")
     }
 
     private fun filterTimelineItems(items: List<*>, shape: ModelShape): ListFilterResult {

@@ -1,12 +1,13 @@
 package twifucker.revived.hook
 
-import android.util.Log
 import android.view.View
 import io.github.libxposed.api.XposedInterface
 import twifucker.revived.core.HookContext
 import twifucker.revived.core.HookInstallResult
 import twifucker.revived.core.HookInstallScope
 import twifucker.revived.core.TargetHook
+import twifucker.revived.core.logD
+import twifucker.revived.core.logI
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -48,7 +49,7 @@ object GoogleAdsHook : TargetHook {
         val adViewClass = try {
             classLoader.loadClass(NATIVE_AD_VIEW_CLASS)
         } catch (e: ClassNotFoundException) {
-            xposed.log(Log.INFO, TAG, "NativeAdView not present, skip")
+            xposed.logI(TAG, "NativeAdView not present, skip")
             return
         }
 
@@ -60,17 +61,17 @@ object GoogleAdsHook : TargetHook {
         } ?: throw NoSuchMethodException("onVisibilityChanged on $NATIVE_AD_VIEW_CLASS")
 
         if (!registeredMethods.add(method)) {
-            xposed.log(Log.INFO, TAG, "Already registered on ${adViewClass.simpleName}.${method.name}, skip")
+            xposed.logI(TAG, "Already registered on ${adViewClass.simpleName}.${method.name}, skip")
             return
         }
 
         xposed.hook(method).intercept { chain ->
             val view = chain.getThisObject() as? View
             view?.visibility = View.GONE
-            xposed.log(Log.DEBUG, TAG, "Hidden Google native ad view")
+            xposed.logD(TAG, "Hidden Google native ad view")
             null
         }
 
-        xposed.log(Log.INFO, TAG, "Registered on ${adViewClass.simpleName}.${method.name}")
+        xposed.logI(TAG, "Registered on ${adViewClass.simpleName}.${method.name}")
     }
 }

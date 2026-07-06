@@ -11,6 +11,7 @@ import twifucker.revived.hook.BilingualTranslationHook
 import twifucker.revived.hook.BilingualTranslationSettingsHook
 import twifucker.revived.hook.BilingualTranslationStatusHook
 import twifucker.revived.hook.GoogleAdsHook
+import twifucker.revived.hook.LegacyTimelineItemFilterHook
 import twifucker.revived.hook.LocalPremiumHook
 import twifucker.revived.hook.UrtTimelineItemFilterHook
 
@@ -21,6 +22,7 @@ class TwiFuckerRevivedModule : XposedModule() {
 
         private val TARGET_HOOKS: List<TargetHook> = listOf(
             UrtTimelineItemFilterHook,
+            LegacyTimelineItemFilterHook,
             GoogleAdsHook,
             LocalPremiumHook,
             BilingualTranslationHook,

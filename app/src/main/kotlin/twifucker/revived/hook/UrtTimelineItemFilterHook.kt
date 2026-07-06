@@ -17,8 +17,7 @@ import java.util.WeakHashMap
  *
  * 12.5.0 起主时间线更多走 com.x.models.timelines.items.UrtTimelineItem，而不是旧的
  * LoganSquare JsonTimeline* 模型。这里在 DefaultUrtTimelineComponent 的 timelineUpdates
- * flow map 层过滤 List<UrtTimelineItem>，同时 hook UrtTimelineModule#getItems() 兜住模块内部
- * item 被延迟展开的路径。
+ * flow map 层过滤 List<UrtTimelineItem>，并处理 UrtTimelineModule 内部延迟展开的 item。
  */
 object UrtTimelineItemFilterHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/UrtTimeline"

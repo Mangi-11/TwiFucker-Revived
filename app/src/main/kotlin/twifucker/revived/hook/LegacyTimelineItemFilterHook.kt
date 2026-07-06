@@ -15,11 +15,10 @@ import java.util.Collections
 import java.util.WeakHashMap
 
 /**
- * 过滤旧版 collection adapter 链路中的 promoted tweet row。
+ * 过滤旧版 collection adapter 链路中的不需要条目。
  *
  * TweetDetailActivity 和部分 legacy 列表仍使用 h0 -> ItemCollection 链路。
- * 这里在 h0 更新集合前过滤 a0.s() 指向的 Tweet 中带有 promotedContent 的 item，
- * 避免 UI 层继续渲染 tweet_ad_badge_top_right 这类旧 row 广告。
+ * 这里在 h0 更新集合前移除 promoted tweet row，以及详情页的“发现更多”推荐 section。
  */
 object LegacyTimelineItemFilterHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/LegacyTimeline"
@@ -27,9 +26,17 @@ object LegacyTimelineItemFilterHook : TargetHook {
     private const val LEGACY_LIST_HOST = "com.twitter.app.legacy.list.h0"
     private const val ITEM_COLLECTION = "com.twitter.model.common.collection.e"
     private const val LIST_COLLECTION = "com.twitter.model.common.collection.g"
+    private const val TIMELINE_ITEM = "com.twitter.model.timeline.q1"
+    private const val MODULE_HEADER_ITEM = "com.twitter.model.timeline.l0"
+    private const val TIMELINE_METADATA = "com.twitter.model.timeline.urt.c0"
+    private const val MODULE_HEADER = "com.twitter.model.timeline.urt.b0"
     private const val TIMELINE_TWEET_ITEM = "com.twitter.model.timeline.a0"
     private const val TIMELINE_TWEET = "com.twitter.model.core.e"
+    private const val SOCIAL_CONTEXT = "com.twitter.model.core.q0"
     private const val PROMOTED_CONTENT = "com.twitter.model.core.entity.ad.h"
+
+    private val discoverMoreTitles = setOf("发现更多", "Discover more")
+    private val discoverMoreSocialProofTexts = setOf("源自于整个 X", "From across X")
 
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
@@ -83,7 +90,8 @@ object LegacyTimelineItemFilterHook : TargetHook {
             val replacement = shape.listCollectionConstructor.newInstance(filtered.items)
             xposed.logD(
                 TAG,
-                "Filtered legacy timeline items: removed=${filtered.removed}, kept=${filtered.items.size}",
+                "Filtered legacy timeline items: removed=${filtered.removed}, " +
+                    "discoverMore=${filtered.removedDiscoverMore}, kept=${filtered.items.size}",
             )
             chain.proceed(arrayOf(replacement))
         }
@@ -96,10 +104,33 @@ object LegacyTimelineItemFilterHook : TargetHook {
 
         var changed = false
         var removed = 0
+        var removedDiscoverMore = 0
+        var discoverMoreGroupEntryId: String? = null
         val out = ArrayList<Any?>(size)
 
         for (index in 0 until size) {
             val item = shape.collectionGetItem.invoke(collection, index)
+            if (item != null && shape.timelineItemClass.isInstance(item)) {
+                val groupEntryId = shape.timelineItemGetGroupEntryId.invoke(item) as? String
+                if (discoverMoreGroupEntryId != null && groupEntryId == discoverMoreGroupEntryId) {
+                    changed = true
+                    removed += 1
+                    removedDiscoverMore += 1
+                    continue
+                }
+                if (discoverMoreGroupEntryId != null && groupEntryId != discoverMoreGroupEntryId) {
+                    discoverMoreGroupEntryId = null
+                }
+
+                if (isDiscoverMoreHeader(item, shape)) {
+                    discoverMoreGroupEntryId = groupEntryId?.takeUnless { it.isBlank() || it == "unspecified" }
+                    changed = true
+                    removed += 1
+                    removedDiscoverMore += 1
+                    continue
+                }
+            }
+
             if (item != null && isPromotedTimelineItem(item, shape)) {
                 changed = true
                 removed += 1
@@ -109,7 +140,12 @@ object LegacyTimelineItemFilterHook : TargetHook {
         }
 
         return if (changed) {
-            CollectionFilterResult(items = out, changed = true, removed = removed)
+            CollectionFilterResult(
+                items = out,
+                changed = true,
+                removed = removed,
+                removedDiscoverMore = removedDiscoverMore,
+            )
         } else {
             CollectionFilterResult.unchanged()
         }
@@ -122,13 +158,31 @@ object LegacyTimelineItemFilterHook : TargetHook {
         return shape.promotedContentField.get(tweet) != null
     }
 
+    private fun isDiscoverMoreHeader(item: Any, shape: ModelShape): Boolean {
+        if (!shape.moduleHeaderItemClass.isInstance(item)) return false
+        val timelineMetadata = shape.timelineMetadataField.get(item) ?: return false
+        val moduleHeader = shape.moduleHeaderField.get(timelineMetadata) ?: return false
+        val title = shape.moduleHeaderTitleField.get(moduleHeader) as? String ?: return false
+        if (title !in discoverMoreTitles) return false
+
+        val socialContext = shape.moduleHeaderSocialContextField.get(moduleHeader) ?: return false
+        val socialProof = shape.socialProofTextField.get(socialContext) as? String ?: return false
+        return socialProof in discoverMoreSocialProofTexts
+    }
+
     private data class CollectionFilterResult(
         val items: List<Any?>,
         val changed: Boolean,
         val removed: Int,
+        val removedDiscoverMore: Int,
     ) {
         companion object {
-            private val UNCHANGED = CollectionFilterResult(emptyList(), changed = false, removed = 0)
+            private val UNCHANGED = CollectionFilterResult(
+                emptyList(),
+                changed = false,
+                removed = 0,
+                removedDiscoverMore = 0,
+            )
             fun unchanged() = UNCHANGED
         }
     }
@@ -137,6 +191,14 @@ object LegacyTimelineItemFilterHook : TargetHook {
         val collectionGetSize: Method,
         val collectionGetItem: Method,
         val listCollectionConstructor: Constructor<*>,
+        val timelineItemClass: Class<*>,
+        val timelineItemGetGroupEntryId: Method,
+        val moduleHeaderItemClass: Class<*>,
+        val timelineMetadataField: Field,
+        val moduleHeaderField: Field,
+        val moduleHeaderTitleField: Field,
+        val moduleHeaderSocialContextField: Field,
+        val socialProofTextField: Field,
         val timelineTweetItemClass: Class<*>,
         val timelineTweetGetTweet: Method,
         val timelineTweetClass: Class<*>,
@@ -147,14 +209,40 @@ object LegacyTimelineItemFilterHook : TargetHook {
                 val locator = HookLocator(classLoader)
                 val collectionClass = locator.requireClass(ITEM_COLLECTION)
                 val listCollectionClass = locator.requireClass(LIST_COLLECTION)
+                val timelineItemClass = locator.requireClass(TIMELINE_ITEM)
+                val moduleHeaderItemClass = locator.requireClass(MODULE_HEADER_ITEM)
+                val timelineMetadataClass = locator.requireClass(TIMELINE_METADATA)
+                val moduleHeaderClass = locator.requireClass(MODULE_HEADER)
                 val timelineTweetItemClass = locator.requireClass(TIMELINE_TWEET_ITEM)
                 val timelineTweetClass = locator.requireClass(TIMELINE_TWEET)
+                val socialContextClass = locator.requireClass(SOCIAL_CONTEXT)
                 val promotedContentClass = locator.requireClass(PROMOTED_CONTENT)
 
                 return ModelShape(
                     collectionGetSize = collectionClass.getMethod("getSize"),
                     collectionGetItem = collectionClass.getMethod("n", Int::class.javaPrimitiveType),
                     listCollectionConstructor = listCollectionClass.getConstructor(Iterable::class.java),
+                    timelineItemClass = timelineItemClass,
+                    timelineItemGetGroupEntryId = timelineItemClass.getMethod("e"),
+                    moduleHeaderItemClass = moduleHeaderItemClass,
+                    timelineMetadataField = locator.requireDeclaredField(timelineItemClass, "timeline metadata") {
+                        it.type == timelineMetadataClass
+                    },
+                    moduleHeaderField = locator.requireDeclaredField(timelineMetadataClass, "module header") {
+                        it.type == moduleHeaderClass
+                    },
+                    moduleHeaderTitleField = locator.requireDeclaredField(moduleHeaderClass, "module header title") {
+                        it.type == String::class.java
+                    },
+                    moduleHeaderSocialContextField = locator.requireDeclaredField(
+                        moduleHeaderClass,
+                        "module header social context",
+                    ) {
+                        it.type == socialContextClass
+                    },
+                    socialProofTextField = locator.requireDeclaredField(socialContextClass, "social proof text") {
+                        it.name == "k" && it.type == String::class.java
+                    },
                     timelineTweetItemClass = timelineTweetItemClass,
                     timelineTweetGetTweet = timelineTweetItemClass.getMethod("s"),
                     timelineTweetClass = timelineTweetClass,

@@ -6,12 +6,19 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.HookLocator
+import twifucker.revived.core.TargetHook
+import twifucker.revived.hook.translation.ActiveTimelineTranslations
+import twifucker.revived.hook.translation.BilingualTextFormatter
+import twifucker.revived.hook.translation.TimelineTranslationCache
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.Collections
-import java.util.LinkedHashMap
 import java.util.Map
 import java.util.WeakHashMap
 
@@ -22,7 +29,7 @@ import java.util.WeakHashMap
  * AutoTranslatedTweetViewDelegateBinder 绑定到 com.twitter.translation.d。这里先从绑定输入里
  * 缓存“译文 -> 原文”，再在 TranslationView 写入 TextView 前替换成双语内容。
  */
-object BilingualTimelineTranslationHook {
+object BilingualTimelineTranslationHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/BilingualTimeline"
 
     private const val TIMELINE_TRANSLATION_BINDER =
@@ -42,23 +49,11 @@ object BilingualTimelineTranslationHook {
     private const val CONTENT_ENTITIES =
         "com.twitter.model.core.entity.h1"
 
-    private const val ORIGINAL_SEPARATOR = "\n\n"
-    private const val MAX_TRANSLATION_CACHE_SIZE = 512
-
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
-    private val translationTextToOriginalText: MutableMap<String, String> =
-        Collections.synchronizedMap(
-            object : LinkedHashMap<String, String>(MAX_TRANSLATION_CACHE_SIZE, 0.75f, true) {
-                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
-                    return size > MAX_TRANSLATION_CACHE_SIZE
-                }
-            },
-        )
-
-    private val activeTranslations: MutableMap<Any, ActiveTranslationRecord> =
-        Collections.synchronizedMap(WeakHashMap())
+    private val translationCache = TimelineTranslationCache()
+    private val activeTranslations = ActiveTimelineTranslations()
 
     private val mainHandler by lazy(LazyThreadSafetyMode.NONE) {
         Handler(Looper.getMainLooper())
@@ -69,6 +64,9 @@ object BilingualTimelineTranslationHook {
             refreshActiveTranslations(enabled)
         }
     }
+
+    override val name = "BilingualTimelineTranslation"
+    override val expectedHooks = 2
 
     @Volatile
     private var activeRenderMethod: Method? = null
@@ -83,23 +81,25 @@ object BilingualTimelineTranslationHook {
     private var preferenceListenerRegistered = false
 
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
         val shape = try {
-            TimelineTranslationShape.resolve(classLoader)
+            TimelineTranslationShape.resolve(context.classLoader)
         } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "resolve timeline translation shape failed: ${t.javaClass.name}: ${t.message}", t)
-            return
+            scope.fail("resolve timeline translation shape", t)
+            return scope.result()
         }
 
-        try {
-            installMappingHook(xposed, classLoader, shape)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "timeline translation mapping hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("timeline translation mapping") {
+            installMappingHook(context.xposed, context.classLoader, shape)
         }
-        try {
-            installRenderHook(xposed, classLoader, shape)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "timeline translation render hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("timeline translation render") {
+            installRenderHook(context.xposed, context.classLoader, shape)
         }
+        return scope.result()
     }
 
     private fun installMappingHook(
@@ -107,10 +107,11 @@ object BilingualTimelineTranslationHook {
         classLoader: ClassLoader,
         shape: TimelineTranslationShape,
     ) {
-        val binderClass = classLoader.loadClass(TIMELINE_TRANSLATION_BINDER)
-        val invokeMethod = binderClass.declaredMethods
-            .firstOrNull { method -> method.name == "invoke" && method.parameterCount == 1 }
-            ?: throw NoSuchMethodException("invoke(Object) on $TIMELINE_TRANSLATION_BINDER")
+        val locator = HookLocator(classLoader)
+        val binderClass = locator.requireClass(TIMELINE_TRANSLATION_BINDER)
+        val invokeMethod = locator.requireDeclaredMethod(binderClass, "invoke(Object)") { method ->
+            method.name == "invoke" && method.parameterCount == 1
+        }
 
         if (!registeredMethods.add(invokeMethod)) {
             xposed.log(Log.INFO, TAG, "Already registered mapping on ${binderClass.simpleName}.${invokeMethod.name}, skip")
@@ -130,15 +131,13 @@ object BilingualTimelineTranslationHook {
         classLoader: ClassLoader,
         shape: TimelineTranslationShape,
     ) {
-        val delegateClass = classLoader.loadClass(TRANSLATION_VIEW_DELEGATE)
-        val renderMethod = delegateClass.declaredMethods
-            .firstOrNull { method ->
-                method.name == "a" &&
-                    method.parameterCount == 3 &&
-                    method.parameterTypes[0] == shape.contentClass
-            }
-            ?: throw NoSuchMethodException("a(f1, g, Function0) on $TRANSLATION_VIEW_DELEGATE")
-        renderMethod.isAccessible = true
+        val locator = HookLocator(classLoader)
+        val delegateClass = locator.requireClass(TRANSLATION_VIEW_DELEGATE)
+        val renderMethod = locator.requireDeclaredMethod(delegateClass, "render translation") { method ->
+            method.name == "a" &&
+                method.parameterCount == 3 &&
+                method.parameterTypes[0] == shape.contentClass
+        }
 
         if (!registeredMethods.add(renderMethod)) {
             xposed.log(Log.INFO, TAG, "Already registered render on ${delegateClass.simpleName}.${renderMethod.name}, skip")
@@ -220,9 +219,7 @@ object BilingualTimelineTranslationHook {
     }
 
     private fun cacheTranslationText(translatedText: String, originalText: String): Boolean {
-        if (buildBilingualText(translatedText, originalText) == null) return false
-        translationTextToOriginalText[normalizeKey(translatedText)] = originalText.trim()
-        return true
+        return translationCache.putIfBilingual(translatedText, originalText)
     }
 
     private fun rememberActiveTranslation(
@@ -231,8 +228,8 @@ object BilingualTimelineTranslationHook {
         textStyle: Any?,
         showMoreCallback: Any?,
     ) {
-        if (delegate == null) return
-        activeTranslations[delegate] = ActiveTranslationRecord(
+        activeTranslations.remember(
+            delegate = delegate,
             content = content,
             textStyle = textStyle,
             showMoreCallback = showMoreCallback,
@@ -243,9 +240,7 @@ object BilingualTimelineTranslationHook {
         val renderMethod = activeRenderMethod ?: return
         val shape = activeShape ?: return
         runOnMainThread {
-            val entries = synchronized(activeTranslations) {
-                activeTranslations.entries.map { it.key to it.value }
-            }
+            val entries = activeTranslations.snapshot()
             var refreshedCount = 0
             var skippedCount = 0
             var failedCount = 0
@@ -304,7 +299,7 @@ object BilingualTimelineTranslationHook {
     }
 
     private fun findOriginalText(translatedText: String): String? {
-        return translationTextToOriginalText[normalizeKey(translatedText)]
+        return translationCache.findOriginalText(translatedText)
     }
 
     private fun readContentText(content: Any, textGetter: Method): String? {
@@ -312,21 +307,8 @@ object BilingualTimelineTranslationHook {
     }
 
     private fun buildBilingualText(translatedText: String, originalText: String): String? {
-        val normalizedTranslatedText = translatedText.trim()
-        val normalizedOriginalText = originalText.trim()
-        if (normalizedTranslatedText.isBlank() || normalizedOriginalText.isBlank()) return null
-        if (normalizedTranslatedText == normalizedOriginalText) return null
-        if (normalizedTranslatedText.endsWith(normalizedOriginalText)) return null
-        return translatedText.trimEnd() + ORIGINAL_SEPARATOR + normalizedOriginalText
+        return BilingualTextFormatter.build(translatedText, originalText)
     }
-
-    private fun normalizeKey(text: String): String = text.trim()
-
-    private data class ActiveTranslationRecord(
-        val content: Any,
-        val textStyle: Any?,
-        val showMoreCallback: Any?,
-    )
 
     private data class TimelineTranslationShape(
         val pairClass: Class<*>,
@@ -345,27 +327,28 @@ object BilingualTimelineTranslationHook {
     ) {
         companion object {
             fun resolve(classLoader: ClassLoader): TimelineTranslationShape {
-                val pairClass = classLoader.loadClass("kotlin.Pair")
-                val viewStateClass = classLoader.loadClass(VIEW_STATE)
-                val translationDelegateClass = classLoader.loadClass(TRANSLATION_VIEW_DELEGATE)
-                val modelTweetClass = classLoader.loadClass(MODEL_TWEET)
-                val coreTweetClass = classLoader.loadClass(CORE_TWEET)
-                val grokTranslatedPostClass = classLoader.loadClass(GROK_TRANSLATED_POST)
-                val contentClass = classLoader.loadClass(CONTENT)
-                val contentEntitiesClass = classLoader.loadClass(CONTENT_ENTITIES)
+                val locator = HookLocator(classLoader)
+                val pairClass = locator.requireClass("kotlin.Pair")
+                val viewStateClass = locator.requireClass(VIEW_STATE)
+                val translationDelegateClass = locator.requireClass(TRANSLATION_VIEW_DELEGATE)
+                val modelTweetClass = locator.requireClass(MODEL_TWEET)
+                val coreTweetClass = locator.requireClass(CORE_TWEET)
+                val grokTranslatedPostClass = locator.requireClass(GROK_TRANSLATED_POST)
+                val contentClass = locator.requireClass(CONTENT)
+                val contentEntitiesClass = locator.requireClass(CONTENT_ENTITIES)
 
-                val pairFirstField = pairClass.declaredFields
-                    .filterNot { Modifier.isStatic(it.modifiers) }
-                    .first()
-                    .apply { isAccessible = true }
-                val viewStateTweetField = viewStateClass.declaredFields
-                    .first { it.type == modelTweetClass }
-                    .apply { isAccessible = true }
-                val modelTweetCoreField = modelTweetClass.declaredFields
-                    .first { it.type == coreTweetClass }
-                    .apply { isAccessible = true }
-                val originalContentField = coreTweetClass.getDeclaredField("k")
-                    .apply { isAccessible = true }
+                val pairFirstField = locator.requireDeclaredField(pairClass, "pair first field") { field ->
+                    !Modifier.isStatic(field.modifiers)
+                }
+                val viewStateTweetField = locator.requireDeclaredField(viewStateClass, "view state tweet field") { field ->
+                    field.type == modelTweetClass
+                }
+                val modelTweetCoreField = locator.requireDeclaredField(modelTweetClass, "core tweet field") { field ->
+                    field.type == coreTweetClass
+                }
+                val originalContentField = locator.requireDeclaredField(coreTweetClass, "original content field") { field ->
+                    field.name == "k"
+                }
                 val grokTranslatedPostMethod = coreTweetClass.getMethod("b")
                 val grokTranslatedContentFields = grokTranslatedPostClass.declaredFields
                     .filter { field -> field.type == contentClass && !Modifier.isStatic(field.modifiers) }
@@ -381,9 +364,10 @@ object BilingualTimelineTranslationHook {
                     contentEntitiesClass,
                     Map::class.java,
                 )
-                val translationTextViewField = translationDelegateClass.declaredFields
-                    .first { it.type == TextView::class.java }
-                    .apply { isAccessible = true }
+                val translationTextViewField =
+                    locator.requireDeclaredField(translationDelegateClass, "translation TextView field") { field ->
+                        field.type == TextView::class.java
+                    }
 
                 return TimelineTranslationShape(
                     pairClass = pairClass,

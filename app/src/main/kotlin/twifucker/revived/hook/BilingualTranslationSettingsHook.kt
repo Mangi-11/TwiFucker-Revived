@@ -4,6 +4,10 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.TargetHook
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.Collections
@@ -18,7 +22,7 @@ import java.util.WeakHashMap
  *
  * 这样行高、左右 padding、开关尺寸和当前 X 版本保持一致。
  */
-object BilingualTranslationSettingsHook {
+object BilingualTranslationSettingsHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/BilingualSettings"
 
     private const val TWITTER_DIALOG_COMPOSABLE = "com.twitter.translation.dialog.g"
@@ -35,22 +39,25 @@ object BilingualTranslationSettingsHook {
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
+    override val name = "BilingualTranslationSettings"
+    override val expectedHooks = 3
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
-        try {
-            installDialogMarkerHook(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "dialog marker hook failed: ${t.javaClass.name}: ${t.message}", t)
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
+        scope.install("dialog marker") {
+            installDialogMarkerHook(context.xposed, context.classLoader)
         }
-        try {
-            installTwitterPreferenceRowHook(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "twitter preference row hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("twitter preference row") {
+            installTwitterPreferenceRowHook(context.xposed, context.classLoader)
         }
-        try {
-            installXLitePreferenceRowHook(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "x-lite preference row hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("x-lite preference row") {
+            installXLitePreferenceRowHook(context.xposed, context.classLoader)
         }
+        return scope.result()
     }
 
     private fun installDialogMarkerHook(

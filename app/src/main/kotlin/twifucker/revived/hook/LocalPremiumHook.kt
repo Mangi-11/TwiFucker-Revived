@@ -2,6 +2,10 @@ package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.TargetHook
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -29,7 +33,7 @@ import java.util.WeakHashMap
  * 边界：若发现某功能必须依赖服务端 entitlement（而非本地 feature switch/userPreferences），
  * 应停止，不硬绕。
  */
-object LocalPremiumHook {
+object LocalPremiumHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/LocalPremium"
 
     private val configClasses = listOf(
@@ -68,13 +72,22 @@ object LocalPremiumHook {
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
+    override val name = "LocalPremium"
+    override val expectedHooks = 2
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
-        try {
-            installFeatureSwitchGate(xposed, classLoader)
-            installUserPreferencesGate(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "register failed", t)
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
+        scope.install("feature switch gate") {
+            installFeatureSwitchGate(context.xposed, context.classLoader)
         }
+        scope.install("user preferences gate") {
+            installUserPreferencesGate(context.xposed, context.classLoader)
+        }
+        return scope.result()
     }
 
     /** hook feature switch facade 的 boolean getter，对 forcedKeys 强制返回 true。 */

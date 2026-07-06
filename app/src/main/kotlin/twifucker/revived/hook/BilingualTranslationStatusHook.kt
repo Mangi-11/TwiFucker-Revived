@@ -7,6 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.TargetHook
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -17,7 +21,7 @@ import java.util.WeakHashMap
  * 官方在翻译已显示时使用“显示原文”，自动翻译的部分状态还会把 action 文案置空。双语对照开启后，
  * 翻译文本里已经包含原文，此时 action 的真实作用是切回原文视图，所以显示为“隐藏翻译”更准确。
  */
-object BilingualTranslationStatusHook {
+object BilingualTranslationStatusHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/BilingualStatus"
 
     private const val STATUS_VIEW = "com.twitter.translation.GrokTranslationStatusView"
@@ -52,12 +56,19 @@ object BilingualTranslationStatusHook {
     @Volatile
     private var preferenceListenerRegistered = false
 
+    override val name = "BilingualTranslationStatus"
+    override val expectedHooks = 1
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
-        try {
-            installStatusHook(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "status hook failed: ${t.javaClass.name}: ${t.message}", t)
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
+        scope.install("status view") {
+            installStatusHook(context.xposed, context.classLoader)
         }
+        return scope.result()
     }
 
     private fun installStatusHook(xposed: XposedInterface, classLoader: ClassLoader) {

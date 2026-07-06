@@ -2,6 +2,11 @@ package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.TargetHook
+import twifucker.revived.hook.translation.BilingualTextFormatter
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -21,7 +26,7 @@ import java.util.WeakHashMap
  * 手动点击“翻译”和服务端已下发的自动翻译结果都走同一条安全路径。当前只保留译文的
  * entityList，追加的原文不带可点击实体，避免为了显示原文去重建复杂的富文本索引。
  */
-object BilingualTranslationHook {
+object BilingualTranslationHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/BilingualTranslate"
 
     private const val MANUAL_TRANSLATION_PRESENTER =
@@ -37,22 +42,25 @@ object BilingualTranslationHook {
     private const val GROK_TRANSLATE_POST_STATE =
         "com.x.urt.items.post.translate.grok.x"
 
-    private const val ORIGINAL_SEPARATOR = "\n\n"
-
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
+    override val name = "BilingualTranslation"
+    override val expectedHooks = 2
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
-        try {
-            installPresenterHook(xposed, classLoader, MANUAL_TRANSLATION_PRESENTER)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "manual presenter hook failed: ${t.javaClass.name}: ${t.message}", t)
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
+        scope.install("manual presenter") {
+            installPresenterHook(context.xposed, context.classLoader, MANUAL_TRANSLATION_PRESENTER)
         }
-        try {
-            installPresenterHook(xposed, classLoader, AUTO_TRANSLATION_PRESENTER)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "auto presenter hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("auto presenter") {
+            installPresenterHook(context.xposed, context.classLoader, AUTO_TRANSLATION_PRESENTER)
         }
+        return scope.result()
     }
 
     private fun installPresenterHook(
@@ -177,12 +185,11 @@ object BilingualTranslationHook {
     }
 
     private fun buildBilingualText(translatedText: String, originalText: String): String? {
-        val normalizedTranslatedText = translatedText.trim()
-        val normalizedOriginalText = originalText.trim()
-        if (normalizedTranslatedText.isBlank() || normalizedOriginalText.isBlank()) return null
-        if (normalizedTranslatedText == normalizedOriginalText) return null
-        if (normalizedTranslatedText.endsWith(normalizedOriginalText)) return null
-        return normalizedTranslatedText + ORIGINAL_SEPARATOR + normalizedOriginalText
+        return BilingualTextFormatter.build(
+            translatedText = translatedText,
+            originalText = originalText,
+            trimTranslatedStart = true,
+        )
     }
 
     private fun resolveStateShape(

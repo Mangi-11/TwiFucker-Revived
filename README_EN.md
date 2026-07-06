@@ -2,21 +2,16 @@
 
 [简体中文](README.md) &nbsp;&nbsp;|&nbsp;&nbsp; English
 
-TwiFucker-Revived is an Xposed module for the X (Twitter) Android app. Inspired by [Dr-TSNG/TwiFucker](https://github.com/Dr-TSNG/TwiFucker), this project reverse-engineered the newer X app and reimplemented the relevant hooks after the original project was discontinued. Current features mainly include removing ads and promoted content, removing sensitive media warnings, and providing bilingual Grok translation.
+TwiFucker-Revived is an Xposed module for the X (Twitter) Android app. Inspired by [Dr-TSNG/TwiFucker](https://github.com/Dr-TSNG/TwiFucker), this project relocates and reimplements hooks for newer X versions after the original project was discontinued.
 
 ## Features
 
-- Removes promoted tweets from the timeline.
-- Removes promoted trends, promoted users, explore banners, and Google native ads.
-- Filters ads, Premium upsells, and who-to-follow modules from the new URT timeline.
-- Removes sensitive media warnings.
-- Unlocks the local Premium UI entry (not a real subscription).
-- Provides bilingual Grok translation with three display modes:
-  - translation above original
-  - original above translation
-  - translation only
-- Adds a bilingual translation toggle to the official Grok translation bottom sheet.
-- Hides the who-to-follow module from the timeline.
+- Filters promoted posts, promoted users, promoted trends, Premium upsells, explore/RTB promotions, and who-to-follow modules from the new URT timeline.
+- Hides Google native ad views when the target app includes `NativeAdView`.
+- Locally bypasses Premium UI gates (not a real subscription).
+- Provides bilingual Grok translation: when enabled, it shows translation plus original text; when disabled, it lets the official UI render normally.
+- Adds a `双语对照` toggle to the official Grok translation bottom sheet.
+- Updates the translation status action label to `隐藏翻译` while bilingual mode is enabled, and restores the official `显示原文` label when disabled.
 
 *More features are under development.*
 
@@ -24,4 +19,4 @@ TwiFucker-Revived is an Xposed module for the X (Twitter) Android app. Inspired 
 
 - Android: 8.1 and later, minimum SDK 27.
 - Xposed Framework: supporting libxposed API 102.
-- X (Twitter): tested on version 12.5.0-release.0 (312050000).
+- X (Twitter): currently targets 12.5.0-release.0 (312050000). Other versions are not guaranteed to work.

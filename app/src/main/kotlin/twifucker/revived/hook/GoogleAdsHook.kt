@@ -3,6 +3,10 @@ package twifucker.revived.hook
 import android.util.Log
 import android.view.View
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.TargetHook
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -16,7 +20,7 @@ import java.util.WeakHashMap
  * 若当前 X 未集成 Google ads（NativeAdView 类不存在），INFO 日志 skip，不算失败。
  * onVisibilityChanged 按 (View, int) -> void 签名定位，不硬编码方法名。
  */
-object GoogleAdsHook {
+object GoogleAdsHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/GoogleAds"
 
     private const val NATIVE_AD_VIEW_CLASS =
@@ -25,15 +29,22 @@ object GoogleAdsHook {
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
+    override val name = "GoogleAds"
+    override val expectedHooks = 1
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
-        try {
-            install(xposed, classLoader)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "register failed", t)
-        }
+        install(HookContext(xposed, classLoader))
     }
 
-    private fun install(xposed: XposedInterface, classLoader: ClassLoader) {
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
+        scope.install("native ad view") {
+            installNativeAdViewHook(context.xposed, context.classLoader)
+        }
+        return scope.result()
+    }
+
+    private fun installNativeAdViewHook(xposed: XposedInterface, classLoader: ClassLoader) {
         val adViewClass = try {
             classLoader.loadClass(NATIVE_AD_VIEW_CLASS)
         } catch (e: ClassNotFoundException) {

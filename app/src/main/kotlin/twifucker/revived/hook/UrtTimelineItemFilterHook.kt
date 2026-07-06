@@ -2,6 +2,11 @@ package twifucker.revived.hook
 
 import android.util.Log
 import io.github.libxposed.api.XposedInterface
+import twifucker.revived.core.HookContext
+import twifucker.revived.core.HookInstallResult
+import twifucker.revived.core.HookInstallScope
+import twifucker.revived.core.HookLocator
+import twifucker.revived.core.TargetHook
 import java.lang.reflect.Method
 import java.util.Collections
 import java.util.WeakHashMap
@@ -14,7 +19,7 @@ import java.util.WeakHashMap
  * flow map 层过滤 List<UrtTimelineItem>，同时 hook UrtTimelineModule#getItems() 兜住模块内部
  * item 被延迟展开的路径。
  */
-object UrtTimelineItemFilterHook {
+object UrtTimelineItemFilterHook : TargetHook {
     private const val TAG = "TwiFuckerRevived/UrtTimeline"
 
     private const val FLOW_FILTER = "com.x.urt.v\$a"
@@ -45,24 +50,29 @@ object UrtTimelineItemFilterHook {
     private val registeredMethods =
         Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap<Method, Boolean>()))
 
+    override val name = "UrtTimelineItemFilter"
+    override val expectedHooks = 2
+
     fun register(xposed: XposedInterface, classLoader: ClassLoader) {
+        install(HookContext(xposed, classLoader))
+    }
+
+    override fun install(context: HookContext): HookInstallResult {
+        val scope = HookInstallScope(name, expectedHooks)
         val shape = try {
-            ModelShape.resolve(classLoader)
+            ModelShape.resolve(context.classLoader)
         } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "resolve model shape failed: ${t.javaClass.name}: ${t.message}", t)
-            return
+            scope.fail("resolve model shape", t)
+            return scope.result()
         }
 
-        try {
-            installTimelineFlowHook(xposed, classLoader, shape)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "timeline flow hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("timeline flow") {
+            installTimelineFlowHook(context.xposed, context.classLoader, shape)
         }
-        try {
-            installModuleItemsHook(xposed, shape)
-        } catch (t: Throwable) {
-            xposed.log(Log.ERROR, TAG, "module items hook failed: ${t.javaClass.name}: ${t.message}", t)
+        scope.install("module items") {
+            installModuleItemsHook(context.xposed, shape)
         }
+        return scope.result()
     }
 
     private fun installTimelineFlowHook(
@@ -70,10 +80,11 @@ object UrtTimelineItemFilterHook {
         classLoader: ClassLoader,
         shape: ModelShape,
     ) {
-        val flowFilterClass = classLoader.loadClass(FLOW_FILTER)
-        val emitMethod = flowFilterClass.declaredMethods
-            .firstOrNull { method -> method.name == "emit" && method.parameterCount == 2 }
-            ?: throw NoSuchMethodException("emit(Object, Continuation) on $FLOW_FILTER")
+        val locator = HookLocator(classLoader)
+        val flowFilterClass = locator.requireClass(FLOW_FILTER)
+        val emitMethod = locator.requireDeclaredMethod(flowFilterClass, "emit(Object, Continuation)") { method ->
+            method.name == "emit" && method.parameterCount == 2
+        }
 
         if (!registeredMethods.add(emitMethod)) {
             xposed.log(Log.INFO, TAG, "Already registered on ${flowFilterClass.simpleName}.${emitMethod.name}, skip")
@@ -285,17 +296,18 @@ object UrtTimelineItemFilterHook {
     ) {
         companion object {
             fun resolve(classLoader: ClassLoader): ModelShape {
-                val timelineItemClass = classLoader.loadClass(URT_TIMELINE_ITEM)
-                val postClass = classLoader.loadClass(URT_TIMELINE_POST)
-                val userClass = classLoader.loadClass(URT_TIMELINE_USER)
-                val trendClass = classLoader.loadClass(URT_TIMELINE_TREND)
-                val moduleClass = classLoader.loadClass(URT_TIMELINE_MODULE)
-                val moduleItemClass = classLoader.loadClass(URT_TIMELINE_MODULE_ITEM)
-                val timelineTrendClass = classLoader.loadClass(TIMELINE_TREND)
-                val clientEventInfoClass = classLoader.loadClass(CLIENT_EVENT_INFO)
-                val moduleHeaderClass = classLoader.loadClass(MODULE_HEADER)
-                val moduleFooterClass = classLoader.loadClass(MODULE_FOOTER)
-                val moduleDisplayTypeClass = classLoader.loadClass(MODULE_DISPLAY_TYPE)
+                val locator = HookLocator(classLoader)
+                val timelineItemClass = locator.requireClass(URT_TIMELINE_ITEM)
+                val postClass = locator.requireClass(URT_TIMELINE_POST)
+                val userClass = locator.requireClass(URT_TIMELINE_USER)
+                val trendClass = locator.requireClass(URT_TIMELINE_TREND)
+                val moduleClass = locator.requireClass(URT_TIMELINE_MODULE)
+                val moduleItemClass = locator.requireClass(URT_TIMELINE_MODULE_ITEM)
+                val timelineTrendClass = locator.requireClass(TIMELINE_TREND)
+                val clientEventInfoClass = locator.requireClass(CLIENT_EVENT_INFO)
+                val moduleHeaderClass = locator.requireClass(MODULE_HEADER)
+                val moduleFooterClass = locator.requireClass(MODULE_FOOTER)
+                val moduleDisplayTypeClass = locator.requireClass(MODULE_DISPLAY_TYPE)
 
                 return ModelShape(
                     timelineItemClass = timelineItemClass,
